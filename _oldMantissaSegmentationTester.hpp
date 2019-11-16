@@ -8,7 +8,7 @@
 
 constexpr unsigned int TWO_SEG_FULL_TAIL_MASK = ~0;
 constexpr int TWO_SEGMENT_BITS = 32;
-constexpr size_t TWO_SEG_HEAD_MASK = static_cast<size_t>(TWO_SEG_FULL_TAIL_MASK) << TWO_SEGMENT_BITS;
+constexpr unsigned long TWO_SEG_HEAD_MASK = static_cast<unsigned long>(TWO_SEG_FULL_TAIL_MASK) << TWO_SEGMENT_BITS;
 unsigned int tailBits = 0;
 
 // only useful for n > 0 and n < 32
@@ -24,7 +24,7 @@ public:
 
     ManSeg(double& d) // todo: make template ?
     {
-        const size_t l = *reinterpret_cast<const size_t*>(&d);
+        const unsigned long l = *reinterpret_cast<const unsigned long*>(&d);
         head = (l & TWO_SEG_HEAD_MASK) >> TWO_SEGMENT_BITS;
         tail = l & TWO_SEG_FULL_TAIL_MASK;
     }
@@ -50,9 +50,9 @@ public:
     }
 
 private:
-    constexpr double toFullDouble(const ManSeg& m) { size_t l = m.head; l <<= TWO_SEGMENT_BITS; l |= m.tail; return *reinterpret_cast<double*>(&l); }
-    constexpr double toHalfDouble(const ManSeg& m) { size_t l = m.head; l <<= TWO_SEGMENT_BITS; return *reinterpret_cast<double*>(&l); }
-    constexpr void setSegments(const double& d) { const size_t l = *reinterpret_cast<const size_t*>(&d); head = (l & TWO_SEG_HEAD_MASK) >> TWO_SEGMENT_BITS; tail = l & TWO_SEG_FULL_TAIL_MASK; }
+    constexpr double toFullDouble(const ManSeg& m) { unsigned long l = m.head; l <<= TWO_SEGMENT_BITS; l |= m.tail; return *reinterpret_cast<double*>(&l); }
+    constexpr double toHalfDouble(const ManSeg& m) { unsigned long l = m.head; l <<= TWO_SEGMENT_BITS; return *reinterpret_cast<double*>(&l); }
+    constexpr void setSegments(const double& d) { const unsigned long l = *reinterpret_cast<const unsigned long*>(&d); head = (l & TWO_SEG_HEAD_MASK) >> TWO_SEGMENT_BITS; tail = l & TWO_SEG_FULL_TAIL_MASK; }
     double toDouble(const ManSeg& m);
    
     unsigned int head, tail;
@@ -60,7 +60,7 @@ private:
 
 double ManSeg::toDouble(const ManSeg& m)
 {
-    size_t l = m.head;
+    unsigned long l = m.head;
     l <<= TWO_SEGMENT_BITS;
 
     if(tailBits == TWO_SEGMENT_BITS)

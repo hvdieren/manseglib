@@ -1,16 +1,42 @@
 #include <iostream>
+#include <iomanip>
+#include <random>
+
 #include "mantissaSegmentation.hpp"
 
 int main()
 {
-    ManSegArray* arr = new ManSegArray(100);
+    int size = 10000;
+    ManSegArray* arr = new ManSegArray(size);
+    double* darr = new double[size];
 
-    double d = 1.25;
-    arr->setPair(0, d);
+    srand(1);
+    for(int i = 0; i < size; i++)
+    {
+        double val = (static_cast<double>(rand()) / RAND_MAX);
+        arr->setPair(i, val);
+        darr[i] = val;
+    }
 
-    arr->setPair(50, d);
+    std::cout << std::setprecision(16);
 
-    arr->print();
+    double sum = 0.0;
+    for(int i = 0; i < size; i++)
+        sum += arr->readHead(i);
+
+    std::cout << "heads only =\t" << sum << std::endl;
+
+    sum = 0.0;
+    for(int i = 0; i < size; i++)
+        sum += arr->readPair(i);
+
+    std::cout << "heads + tails =\t" << sum << std::endl;
+
+    sum = 0.0;
+    for(int i = 0; i < size; i++)
+        sum += darr[i];
+
+    std::cout << "std double =\t" << sum << std::endl;
 
     return 0;
 }
