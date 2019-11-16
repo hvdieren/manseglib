@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 
 #ifndef size_t
 typedef unsigned long size_t;
@@ -29,13 +28,6 @@ public:
         lhs += rhs;
         return lhs;
     }
-
-    // operator double()
-    // {
-    //     size_t l = head;
-    //     l <<= segmentBits;
-    //     return *reinterpret_cast<double*>(&l);
-    // }
 
     operator double() const
     {
@@ -121,50 +113,77 @@ public:
         if(tails) delete[] tails;
     }
 
-    void setHead(size_t id, unsigned int val)
-    {
-        heads[id] = val;
-    }
+/*
+        // void setHead(size_t id, unsigned int val)
+        // {
+        //     heads[id] = val;
+        // }
 
-    void setPair(size_t id, unsigned int head, unsigned int tail)
-    {
-        heads[id] = head;
-        tails[id] = tail;
-    }
+        // void setPair(size_t id, unsigned int head, unsigned int tail)
+        // {
+        //     heads[id] = head;
+        //     tails[id] = tail;
+        // }
 
-    void setPair(size_t id, double d)
+        // void setPair(size_t id, double d)
+        // {
+        //     const size_t l = *reinterpret_cast<const size_t*>(&d);
+        //     heads[id] = l >> segmentBits;
+        //     tails[id] = l & tailMask;
+        // }
+*/
+
+    template<int bits = 64>
+    void set(size_t id, double d)
     {
         const size_t l = *reinterpret_cast<const size_t*>(&d);
         heads[id] = l >> segmentBits;
         tails[id] = l & tailMask;
     }
 
-    double toDouble(unsigned int& head, unsigned int& tail)
+    template<class T = ManSegPair>
+    T read(size_t id)
     {
-       size_t l = head;
-        l <<= segmentBits;
-        l |= tail;
-
-        return *reinterpret_cast<double*>(&l);
+        return T(heads[id], tails[id]);
     }
+    
+private:
+/*
+    // ManSegHead readHead(size_t id)
+    // {
+    //     return ManSegHead(heads[id]);
+    // }
 
-// private:
-    ManSegHead readHead(size_t id)
-    {
-        return ManSegHead(heads[id]);
-    }
-
-    ManSegPair readPair(size_t id)
-    {
-        return ManSegPair(heads[id], tails[id]);
-    }
+    // ManSegPair readPair(size_t id)
+    // {
+    //     return ManSegPair(heads[id], tails[id]);
+    // }
+*/
 
     static constexpr int segmentBits = 32;
-    static constexpr unsigned int tailMask = ~0; // todo: should getBits()
+    static constexpr unsigned int tailMask = ~0; // todo: should getBits() ?
     static constexpr size_t headMask = static_cast<unsigned long>(tailMask) << segmentBits;
     unsigned int* heads;
     unsigned int* tails;
 
 };
 
+template<>
+void ManSegArray::set<32>(size_t id, double d)
+{
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = 0;
+}
 
+template<>
+ManSegHead ManSegArray::read(size_t id)
+{
+    return ManSegHead(heads[id]);
+}
+
+template<>
+ManSegPair ManSegArray::read(size_t id)
+{
+    return ManSegPair(heads[id], tails[id]);
+}

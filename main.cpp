@@ -14,23 +14,35 @@ int main()
     for(int i = 0; i < size; i++)
     {
         double val = (static_cast<double>(rand()) / RAND_MAX);
-        arr->setPair(i, val);
+        arr->set(i, val);
         darr[i] = val;
     }
 
     std::cout << std::setprecision(16);
 
     double sum = 0.0;
+   
+    /*
+        for(int i = 0; i < size; i++)
+            sum += arr->readHead(i);
+
+        std::cout << "heads only =\t" << sum << std::endl;
+
+        sum = 0.0;
+        for(int i = 0; i < size; i++)
+            sum += arr->readPair(i);
+
+        std::cout << "heads + tails =\t" << sum << std::endl;
+    */
+
     for(int i = 0; i < size; i++)
-        sum += arr->readHead(i);
+        sum += arr->read<ManSegHead>(i);
 
     std::cout << "heads only =\t" << sum << std::endl;
 
     sum = 0.0;
     for(int i = 0; i < size; i++)
-        sum += arr->readPair(i);
-
-    std::cout << "heads + tails =\t" << sum << std::endl;
+        sum += arr->read(i);
 
     sum = 0.0;
     for(int i = 0; i < size; i++)
