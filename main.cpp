@@ -4,51 +4,57 @@
 
 #include "mantissaSegmentation.hpp"
 
+void printBinary(double d) 
+{ 
+    unsigned long l = reinterpret_cast<unsigned long&>(d);
+    for(int i = 63; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i == 63 || i == 52)
+            std::cout << " ";
+        else if(i == 32)
+            std::cout << "|";
+    } 
+    std::cout << std::endl; 
+}
+
 int main()
 {
-    int size = 10000;
+    srand(1);
+
+    const size_t size = 1e8;
     ManSegArray* arr = new ManSegArray(size);
     double* darr = new double[size];
 
-    srand(1);
-    for(int i = 0; i < size; i++)
+    for(size_t i = 0; i < size; i++)
     {
         double val = (static_cast<double>(rand()) / RAND_MAX);
         arr->set(i, val);
         darr[i] = val;
     }
 
-    std::cout << std::setprecision(16);
+    //     head sum     pair sum   std double sum
+    double hsum = 0.0, psum = 0.0, dsum = 0.0;
 
-    double sum = 0.0;
-   
-    /*
-        for(int i = 0; i < size; i++)
-            sum += arr->readHead(i);
+    for(size_t i = 0; i < size; i++)
+        hsum += (arr->read<ManSegHead>(i) * 0.25) / 3.0;
 
-        std::cout << "heads only =\t" << sum << std::endl;
+    for(size_t i = 0; i < size; i++)
+        psum += (arr->read(i) * 0.25) / 3.0;
 
-        sum = 0.0;
-        for(int i = 0; i < size; i++)
-            sum += arr->readPair(i);
+    for(size_t i = 0; i < size; i++)
+        dsum += (darr[i] * 0.25) / 3.0;
 
-        std::cout << "heads + tails =\t" << sum << std::endl;
-    */
+    std::cout << std::fixed << std::setprecision(16);
+    std:: cout << "heads only =\t" << hsum << "        ";
+    printBinary(hsum);
+    std::cout << "heads+tails =\t" << psum << "        ";
+    printBinary(psum);
+    std::cout << "std double =\t" << dsum << "        ";
+    printBinary(dsum);
 
-    for(int i = 0; i < size; i++)
-        sum += arr->read<ManSegHead>(i);
-
-    std::cout << "heads only =\t" << sum << std::endl;
-
-    sum = 0.0;
-    for(int i = 0; i < size; i++)
-        sum += arr->read(i);
-
-    sum = 0.0;
-    for(int i = 0; i < size; i++)
-        sum += darr[i];
-
-    std::cout << "std double =\t" << sum << std::endl;
+    delete arr;
+    delete[] darr;
 
     return 0;
 }

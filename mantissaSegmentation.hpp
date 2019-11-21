@@ -11,6 +11,8 @@ public:
         :head(head)
     {}
 
+    // assignment operator
+
     ManSegHead& operator+=(const ManSegHead& rhs)
     {
         double lhs = *this;
@@ -29,6 +31,60 @@ public:
         return lhs;
     }
 
+    ManSegHead& operator-=(const ManSegHead& rhs)
+    {
+        double lhs = *this;
+        double rs = rhs;
+        lhs -= rs;
+
+        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
+        head = (l >> segmentBits);
+
+        return *this; // what do you return other than this..?
+    }
+
+    friend ManSegHead operator-(ManSegHead lhs, const ManSegHead& rhs)
+    {
+        lhs -= rhs;
+        return lhs;
+    }
+
+    ManSegHead& operator*=(const ManSegHead& rhs)
+    {
+        double lhs = *this;
+        double rs = rhs;
+        lhs *= rs;
+
+        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
+        head = (l >> segmentBits);
+
+        return *this; // what do you return other than this..?
+    }
+
+    friend ManSegHead operator*(ManSegHead lhs, const ManSegHead& rhs)
+    {
+        lhs *= rhs;
+        return lhs;
+    }
+
+    ManSegHead& operator/=(const ManSegHead& rhs)
+    {
+        double lhs = *this;
+        double rs = rhs;
+        lhs /= rs;
+
+        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
+        head = (l >> segmentBits);
+
+        return *this; // what do you return other than this..?
+    }
+
+    friend ManSegHead operator/(ManSegHead lhs, const ManSegHead& rhs)
+    {
+        lhs /= rhs;
+        return lhs;
+    }
+    
     operator double() const
     {
         size_t l = head;
@@ -49,9 +105,6 @@ public:
         :head(head), tail(tail)
     {}
 
-    // todo: other operators
-
-    // todo: head+tail addition.
     ManSegPair& operator+=(const ManSegPair& rhs)
     {
         double lhs = *this;
@@ -62,6 +115,8 @@ public:
         const size_t l = *reinterpret_cast<const size_t*>(&lhs);
         tail = (l & tailMask);
         head = (l >> segmentBits);
+
+        return *this;
     }
 
     friend ManSegPair operator+(ManSegPair lhs, const ManSegPair& rhs)
@@ -70,15 +125,65 @@ public:
         return lhs;
     }
 
-    // do we include these?
-    /*ManSegPair operator+=(const ManSegHead& rhs)
-    {}
-
-    friend ManSegPair operator+(ManSegPair lhs, const ManSegHead& rhs)
+    ManSegPair& operator-=(const ManSegPair& rhs)
     {
-        lhs += rhs;
+        double lhs = *this;
+        double rs = rhs;
+
+        lhs -= rs;
+
+        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
+        tail = (l & tailMask);
+        head = (l >> segmentBits);
+
+        return *this;
+    }
+
+    friend ManSegPair operator-(ManSegPair lhs, const ManSegPair& rhs)
+    {
+        lhs -= rhs;
         return lhs;
-    }*/
+    }
+
+    ManSegPair& operator*=(const ManSegPair& rhs)
+    {
+        double lhs = *this;
+        double rs = rhs;
+
+        lhs *= rs;
+
+        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
+        tail = (l & tailMask);
+        head = (l >> segmentBits);
+
+        return *this;
+    }
+
+    friend ManSegPair operator*(ManSegPair lhs, const ManSegPair& rhs)
+    {
+        lhs *= rhs;
+        return lhs;
+    }
+
+    ManSegPair& operator/=(const ManSegPair& rhs)
+    {
+        double lhs = *this;
+        double rs = rhs;
+
+        lhs /= rs;
+
+        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
+        tail = (l & tailMask);
+        head = (l >> segmentBits);
+
+        return *this;
+    }
+
+    friend ManSegPair operator/(ManSegPair lhs, const ManSegPair& rhs)
+    {
+        lhs /= rhs;
+        return lhs;
+    }
 
     operator double() const
     {
@@ -133,7 +238,8 @@ public:
         // }
 */
 
-    template<int bits = 64>
+    // default to full precision
+    template<typename T = ManSegPair>
     void set(size_t id, double d)
     {
         const size_t l = *reinterpret_cast<const size_t*>(&d);
@@ -141,7 +247,7 @@ public:
         tails[id] = l & tailMask;
     }
 
-    template<class T = ManSegPair>
+    template<typename T = ManSegPair>
     T read(size_t id)
     {
         return T(heads[id], tails[id]);
@@ -169,7 +275,7 @@ private:
 };
 
 template<>
-void ManSegArray::set<32>(size_t id, double d)
+void ManSegArray::set<ManSegHead>(size_t id, double d)
 {
     const size_t l = *reinterpret_cast<const size_t*>(&d);
     heads[id] = l >> segmentBits;
@@ -177,13 +283,7 @@ void ManSegArray::set<32>(size_t id, double d)
 }
 
 template<>
-ManSegHead ManSegArray::read(size_t id)
+ManSegHead ManSegArray::read<ManSegHead>(size_t id)
 {
     return ManSegHead(heads[id]);
-}
-
-template<>
-ManSegPair ManSegArray::read(size_t id)
-{
-    return ManSegPair(heads[id], tails[id]);
 }
