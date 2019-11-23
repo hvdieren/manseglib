@@ -11,79 +11,12 @@ public:
         :head(head)
     {}
 
-    // assignment operator
-
-    ManSegHead& operator+=(const ManSegHead& rhs)
-    {
-        double lhs = *this;
-        double rs = rhs;
-        lhs += rs;
-
-        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
-        head = (l >> segmentBits);
-
-        return *this; // what do you return other than this..?
-    }
-
-    friend ManSegHead operator+(ManSegHead lhs, const ManSegHead& rhs)
-    {
-        lhs += rhs;
-        return lhs;
-    }
-
-    ManSegHead& operator-=(const ManSegHead& rhs)
-    {
-        double lhs = *this;
-        double rs = rhs;
-        lhs -= rs;
-
-        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
-        head = (l >> segmentBits);
-
-        return *this; // what do you return other than this..?
-    }
-
-    friend ManSegHead operator-(ManSegHead lhs, const ManSegHead& rhs)
-    {
-        lhs -= rhs;
-        return lhs;
-    }
-
-    ManSegHead& operator*=(const ManSegHead& rhs)
-    {
-        double lhs = *this;
-        double rs = rhs;
-        lhs *= rs;
-
-        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
-        head = (l >> segmentBits);
-
-        return *this; // what do you return other than this..?
-    }
-
-    friend ManSegHead operator*(ManSegHead lhs, const ManSegHead& rhs)
-    {
-        lhs *= rhs;
-        return lhs;
-    }
-
-    ManSegHead& operator/=(const ManSegHead& rhs)
-    {
-        double lhs = *this;
-        double rs = rhs;
-        lhs /= rs;
-
-        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
-        head = (l >> segmentBits);
-
-        return *this; // what do you return other than this..?
-    }
-
-    friend ManSegHead operator/(ManSegHead lhs, const ManSegHead& rhs)
-    {
-        lhs /= rhs;
-        return lhs;
-    }
+    ManSegHead& operator=(const ManSegHead& rhs);
+    double operator=(const double& d); // todo: might be useful to do these.
+    double operator+=(const ManSegHead& rhs);
+    double operator-=(const ManSegHead& rhs);
+    double operator*=(const ManSegHead& rhs);
+    double operator/=(const ManSegHead& rhs);
     
     operator double() const
     {
@@ -92,7 +25,6 @@ public:
         return *reinterpret_cast<double*>(&l);
     }
 
-private:
     unsigned int& head;
     static constexpr int segmentBits = 32;
 
@@ -105,85 +37,11 @@ public:
         :head(head), tail(tail)
     {}
 
-    ManSegPair& operator+=(const ManSegPair& rhs)
-    {
-        double lhs = *this;
-        double rs = rhs;
-
-        lhs += rs;
-
-        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
-        tail = (l & tailMask);
-        head = (l >> segmentBits);
-
-        return *this;
-    }
-
-    friend ManSegPair operator+(ManSegPair lhs, const ManSegPair& rhs)
-    {
-        lhs += rhs;
-        return lhs;
-    }
-
-    ManSegPair& operator-=(const ManSegPair& rhs)
-    {
-        double lhs = *this;
-        double rs = rhs;
-
-        lhs -= rs;
-
-        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
-        tail = (l & tailMask);
-        head = (l >> segmentBits);
-
-        return *this;
-    }
-
-    friend ManSegPair operator-(ManSegPair lhs, const ManSegPair& rhs)
-    {
-        lhs -= rhs;
-        return lhs;
-    }
-
-    ManSegPair& operator*=(const ManSegPair& rhs)
-    {
-        double lhs = *this;
-        double rs = rhs;
-
-        lhs *= rs;
-
-        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
-        tail = (l & tailMask);
-        head = (l >> segmentBits);
-
-        return *this;
-    }
-
-    friend ManSegPair operator*(ManSegPair lhs, const ManSegPair& rhs)
-    {
-        lhs *= rhs;
-        return lhs;
-    }
-
-    ManSegPair& operator/=(const ManSegPair& rhs)
-    {
-        double lhs = *this;
-        double rs = rhs;
-
-        lhs /= rs;
-
-        const size_t l = *reinterpret_cast<const size_t*>(&lhs);
-        tail = (l & tailMask);
-        head = (l >> segmentBits);
-
-        return *this;
-    }
-
-    friend ManSegPair operator/(ManSegPair lhs, const ManSegPair& rhs)
-    {
-        lhs /= rhs;
-        return lhs;
-    }
+    ManSegPair& operator=(const ManSegPair& rhs);
+    double operator+=(const ManSegPair& rhs);
+    double operator-=(const ManSegPair& rhs);
+    double operator*=(const ManSegPair& rhs);
+    double operator/=(const ManSegPair& rhs);
 
     operator double() const
     {
@@ -193,7 +51,6 @@ public:
         return *reinterpret_cast<double*>(&l);
     }
 
-private:
     unsigned int& head;
     unsigned int& tail;
     static constexpr int segmentBits = 32;
@@ -201,8 +58,6 @@ private:
 
 };
 
-// todo: for arithmetic operators on elements of this
-// should use template args to work out if seghead or segpair
 class ManSegArray
 {
 public:
@@ -218,54 +73,12 @@ public:
         if(tails) delete[] tails;
     }
 
-/*
-        // void setHead(size_t id, unsigned int val)
-        // {
-        //     heads[id] = val;
-        // }
-
-        // void setPair(size_t id, unsigned int head, unsigned int tail)
-        // {
-        //     heads[id] = head;
-        //     tails[id] = tail;
-        // }
-
-        // void setPair(size_t id, double d)
-        // {
-        //     const size_t l = *reinterpret_cast<const size_t*>(&d);
-        //     heads[id] = l >> segmentBits;
-        //     tails[id] = l & tailMask;
-        // }
-*/
-
-    // default to full precision
-    template<typename T = ManSegPair>
-    void set(size_t id, double d)
-    {
-        const size_t l = *reinterpret_cast<const size_t*>(&d);
-        heads[id] = l >> segmentBits;
-        tails[id] = l & tailMask;
-    }
-
-    template<typename T = ManSegPair>
-    T read(size_t id)
-    {
-        return T(heads[id], tails[id]);
-    }
+    void setHead(size_t id, double d);
+    double readHead(size_t id);
+    void setPair(size_t id, double d);
+    double readPair(size_t id);
     
 private:
-/*
-    // ManSegHead readHead(size_t id)
-    // {
-    //     return ManSegHead(heads[id]);
-    // }
-
-    // ManSegPair readPair(size_t id)
-    // {
-    //     return ManSegPair(heads[id], tails[id]);
-    // }
-*/
-
     static constexpr int segmentBits = 32;
     static constexpr unsigned int tailMask = ~0; // todo: should getBits() ?
     static constexpr size_t headMask = static_cast<unsigned long>(tailMask) << segmentBits;
@@ -274,16 +87,204 @@ private:
 
 };
 
-template<>
-void ManSegArray::set<ManSegHead>(size_t id, double d)
+/**
+ * ManSegHead functions
+*/
+ManSegHead& ManSegHead::operator=(const ManSegHead& rhs)
+{
+    unsigned int h = rhs.head;
+    head = h;
+
+    return *this;
+}
+
+double ManSegHead::operator+=(const ManSegHead& rhs)
+{
+    double d = *this;
+    d += rhs;
+
+    return d;
+}
+
+/*
+    inline double operator+(ManSegHead lhs, const ManSegHead& rhs)
+    {
+        unsigned int h = lhs.head;
+        ManSegHead result(h);
+        result += rhs;
+
+        return static_cast<double>(result);
+    }
+*/
+
+inline double operator+(ManSegHead lhs, const ManSegHead& rhs)
+{
+    unsigned int h = lhs.head;
+    double d = static_cast<double>(ManSegHead(h));
+    d += rhs;
+
+    return d;
+}
+
+double ManSegHead::operator-=(const ManSegHead& rhs)
+{
+    double d = *this;
+    d -= rhs;
+
+    return d;
+}
+
+inline double operator-(ManSegHead lhs, const ManSegHead& rhs)
+{
+    unsigned int h = lhs.head;
+    double d = static_cast<double>(ManSegHead(h));
+    d -= rhs;
+
+    return d;
+}
+
+double ManSegHead::operator*=(const ManSegHead& rhs)
+{
+    double d = *this;
+    d *= rhs;
+
+    return d;
+}
+
+inline double operator*(ManSegHead lhs, const ManSegHead& rhs)
+{
+    unsigned int h = lhs.head;
+    double d = static_cast<double>(ManSegHead(h));
+    d *= rhs;
+
+    return d;
+}
+
+double ManSegHead::operator/=(const ManSegHead& rhs)
+{
+    double d = *this;
+    d /= rhs;
+
+    return d;
+}
+
+inline double operator/(ManSegHead lhs, const ManSegHead& rhs)
+{
+    unsigned int h = lhs.head;
+    double d = static_cast<double>(ManSegHead(h));
+    d /= rhs;
+
+    return d;
+}
+
+/**
+ * ManSegPair functions
+*/
+ManSegPair& ManSegPair::operator=(const ManSegPair& rhs)
+{
+    unsigned int h = rhs.head;
+    unsigned int t = rhs.tail;
+    head = h;
+    tail = t;
+
+    return *this;
+}
+
+double ManSegPair::operator+=(const ManSegPair& rhs)
+{
+    double d = *this;
+    d += rhs;
+
+    return d;
+}
+
+inline double operator+(ManSegPair lhs, const ManSegPair& rhs)
+{
+    unsigned int h = lhs.head;
+    unsigned int t = lhs.tail;
+    double d = static_cast<double>(ManSegPair(h, t));
+    d += rhs;
+
+    return d;
+}
+
+double ManSegPair::operator-=(const ManSegPair& rhs)
+{
+    double d = *this;
+    d -= rhs;
+
+    return d;
+}
+
+inline double operator-(ManSegPair lhs, const ManSegPair& rhs)
+{
+    unsigned int h = lhs.head;
+    unsigned int t = lhs.tail;
+    double d = static_cast<double>(ManSegPair(h, t));
+    d -= rhs;
+
+    return d;
+}
+
+double ManSegPair::operator*=(const ManSegPair& rhs)
+{
+    double d = *this;
+    d *= rhs;
+
+    return d;
+}
+
+inline double operator*(ManSegPair lhs, const ManSegPair& rhs)
+{
+    unsigned int h = lhs.head;
+    unsigned int t = lhs.tail;
+    double d = static_cast<double>(ManSegPair(h, t));
+    d *= rhs;
+
+    return d;
+}
+
+double ManSegPair::operator/=(const ManSegPair& rhs)
+{
+    double d = *this;
+    d /= rhs;
+
+    return d;
+}
+
+inline double operator/(ManSegPair lhs, const ManSegPair& rhs)
+{
+    unsigned int h = lhs.head;
+    unsigned int t = lhs.tail;
+    double d = static_cast<double>(ManSegPair(h, t));
+    d /= rhs;
+
+    return d;
+}
+
+/**
+ * ManSegArray functions
+*/
+void ManSegArray::setHead(size_t id, double d)
 {
     const size_t l = *reinterpret_cast<const size_t*>(&d);
     heads[id] = l >> segmentBits;
-    tails[id] = 0;
 }
 
-template<>
-ManSegHead ManSegArray::read<ManSegHead>(size_t id)
+double ManSegArray::readHead(size_t id)
 {
-    return ManSegHead(heads[id]);
+    return static_cast<double>(ManSegHead(heads[id]));
+}
+
+void ManSegArray::setPair(size_t id, double d)
+{
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+double ManSegArray::readPair(size_t id)
+{
+    return static_cast<double>(ManSegPair(heads[id], tails[id]));
 }
