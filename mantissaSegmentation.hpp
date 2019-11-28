@@ -11,12 +11,21 @@ public:
         :head(head)
     {}
 
-    ManSegHead& operator=(const ManSegHead& rhs);
-    double operator=(const double& d); // todo: might be useful to do these.
-    double operator+=(const ManSegHead& rhs);
-    double operator-=(const ManSegHead& rhs);
-    double operator*=(const ManSegHead& rhs);
-    double operator/=(const ManSegHead& rhs);
+    // todo: template, but will need to be specialised.
+    // manseghead/manseghead needs specialisation can stay as it is
+    // if rhs = double or float or int, need to convert to manseghead then take head 
+    template<typename T>
+    ManSegHead& operator=(const T& rhs);
+    template<typename T>
+    double operator=(const T& t);
+    template<typename T>
+    double operator+=(const T& rhs);
+    template<typename T>
+    double operator-=(const T& rhs);
+    template<typename T>
+    double operator*=(const T& rhs);
+    template<typename T>
+    double operator/=(const T& rhs);
     
     operator double() const
     {
@@ -37,11 +46,16 @@ public:
         :head(head), tail(tail)
     {}
 
-    ManSegPair& operator=(const ManSegPair& rhs);
-    double operator+=(const ManSegPair& rhs);
-    double operator-=(const ManSegPair& rhs);
-    double operator*=(const ManSegPair& rhs);
-    double operator/=(const ManSegPair& rhs);
+    template<typename T>
+    ManSegPair& operator=(const T& rhs);
+    template<typename T>
+    double operator+=(const T& rhs);
+    template<typename T>
+    double operator-=(const T& rhs);
+    template<typename T>
+    double operator*=(const T& rhs);
+    template<typename T>
+    double operator/=(const T& rhs);
 
     operator double() const
     {
@@ -61,35 +75,67 @@ public:
 class ManSegArray
 {
 public:
-    ManSegArray(size_t length)
+    virtual void set(size_t id, double d) = 0;
+    virtual void set(size_t id, float f) = 0;
+    virtual void set(size_t id, int i) = 0;
+    virtual void set(size_t id, long l) = 0;
+
+    virtual void setPair(size_t id, double d) = 0;
+    virtual void setPair(size_t id, float f) = 0;
+    virtual void setPair(size_t id, int i) = 0;
+    virtual void setPair(size_t id, long li) = 0;
+
+    virtual double read(size_t id) = 0;
+    virtual ManSegArray* updoot() = 0;
+};
+
+template<bool useTail = false>
+class ManSegBase : public ManSegArray
+{
+public:
+    ManSegBase(size_t length)
     {
         heads = new unsigned int[length];
         tails = new unsigned int[length];
     }
 
-    ~ManSegArray()
+    ManSegBase(unsigned int* heads, unsigned int* tails)
+        :heads(heads), tails(tails)
     {
-        if(heads) delete[] heads;
-        if(tails) delete[] tails;
     }
 
-    void setHead(size_t id, double d);
-    double readHead(size_t id);
-    void setPair(size_t id, double d);
-    double readPair(size_t id);
-    
+    ~ManSegBase()
+    {
+        delete[] heads, tails;
+    }
+
+    virtual void set(size_t id, double d) override;
+    virtual void set(size_t id, float f) override;
+    virtual void set(size_t id, int i) override;
+    virtual void set(size_t id, long l) override;
+
+    virtual void setPair(size_t id, double d) override;
+    virtual void setPair(size_t id, float f) override;
+    virtual void setPair(size_t id, int i) override;
+    virtual void setPair(size_t id, long li) override;
+
+    virtual double read(size_t id) override;
+
+    virtual ManSegBase<true>* updoot() override;
+
 private:
+    unsigned int *heads;
+    unsigned int *tails;
     static constexpr int segmentBits = 32;
     static constexpr unsigned int tailMask = ~0; // todo: should getBits() ?
     static constexpr size_t headMask = static_cast<unsigned long>(tailMask) << segmentBits;
-    unsigned int* heads;
-    unsigned int* tails;
 
 };
 
 /**
  * ManSegHead functions
 */
+template<>
 ManSegHead& ManSegHead::operator=(const ManSegHead& rhs)
 {
     unsigned int h = rhs.head;
@@ -98,7 +144,26 @@ ManSegHead& ManSegHead::operator=(const ManSegHead& rhs)
     return *this;
 }
 
-double ManSegHead::operator+=(const ManSegHead& rhs)
+template<>
+ManSegHead& ManSegHead::operator=(const ManSegPair& rhs)
+{
+    unsigned int h = rhs.head;
+    head = h;
+
+    return *this;
+}
+
+template<typename T>
+ManSegHead& ManSegHead::operator=(const T& rhs)
+{
+    const size_t l = static_cast<const size_t>(rhs);
+    head = static_cast<unsigned int>(l >> segmentBits);
+
+    return *this;
+}
+
+template<typename T>
+double ManSegHead::operator+=(const T& rhs)
 {
     double d = *this;
     d += rhs;
@@ -117,7 +182,8 @@ double ManSegHead::operator+=(const ManSegHead& rhs)
     }
 */
 
-inline double operator+(ManSegHead lhs, const ManSegHead& rhs)
+template<typename T>
+inline double operator+(ManSegHead lhs, const T& rhs)
 {
     unsigned int h = lhs.head;
     double d = static_cast<double>(ManSegHead(h));
@@ -126,7 +192,8 @@ inline double operator+(ManSegHead lhs, const ManSegHead& rhs)
     return d;
 }
 
-double ManSegHead::operator-=(const ManSegHead& rhs)
+template<typename T>
+double ManSegHead::operator-=(const T& rhs)
 {
     double d = *this;
     d -= rhs;
@@ -134,7 +201,8 @@ double ManSegHead::operator-=(const ManSegHead& rhs)
     return d;
 }
 
-inline double operator-(ManSegHead lhs, const ManSegHead& rhs)
+template<typename T>
+inline double operator-(ManSegHead lhs, const T& rhs)
 {
     unsigned int h = lhs.head;
     double d = static_cast<double>(ManSegHead(h));
@@ -143,7 +211,8 @@ inline double operator-(ManSegHead lhs, const ManSegHead& rhs)
     return d;
 }
 
-double ManSegHead::operator*=(const ManSegHead& rhs)
+template<typename T>
+double ManSegHead::operator*=(const T& rhs)
 {
     double d = *this;
     d *= rhs;
@@ -151,7 +220,8 @@ double ManSegHead::operator*=(const ManSegHead& rhs)
     return d;
 }
 
-inline double operator*(ManSegHead lhs, const ManSegHead& rhs)
+template<typename T>
+inline double operator*(ManSegHead lhs, const T& rhs)
 {
     unsigned int h = lhs.head;
     double d = static_cast<double>(ManSegHead(h));
@@ -160,7 +230,8 @@ inline double operator*(ManSegHead lhs, const ManSegHead& rhs)
     return d;
 }
 
-double ManSegHead::operator/=(const ManSegHead& rhs)
+template<typename T>
+double ManSegHead::operator/=(const T& rhs)
 {
     double d = *this;
     d /= rhs;
@@ -168,7 +239,8 @@ double ManSegHead::operator/=(const ManSegHead& rhs)
     return d;
 }
 
-inline double operator/(ManSegHead lhs, const ManSegHead& rhs)
+template<typename T>
+inline double operator/(ManSegHead lhs, const T& rhs)
 {
     unsigned int h = lhs.head;
     double d = static_cast<double>(ManSegHead(h));
@@ -180,6 +252,7 @@ inline double operator/(ManSegHead lhs, const ManSegHead& rhs)
 /**
  * ManSegPair functions
 */
+template<>
 ManSegPair& ManSegPair::operator=(const ManSegPair& rhs)
 {
     unsigned int h = rhs.head;
@@ -190,7 +263,29 @@ ManSegPair& ManSegPair::operator=(const ManSegPair& rhs)
     return *this;
 }
 
-double ManSegPair::operator+=(const ManSegPair& rhs)
+template<>
+ManSegPair& ManSegPair::operator=(const ManSegHead& rhs)
+{
+    unsigned int h = rhs.head;
+    unsigned int t = 0U;
+    head = h;
+    tail = t;
+
+    return *this;
+}
+
+template<typename T>
+ManSegPair& ManSegPair::operator=(const T& rhs)
+{
+    const size_t l = static_cast<const size_t>(rhs);
+    head = static_cast<unsigned int>(l >> segmentBits);
+    tail = static_cast<unsigned int>(l & tailMask);
+
+    return *this;
+}
+
+template <typename T>
+double ManSegPair::operator+=(const T& rhs)
 {
     double d = *this;
     d += rhs;
@@ -198,7 +293,8 @@ double ManSegPair::operator+=(const ManSegPair& rhs)
     return d;
 }
 
-inline double operator+(ManSegPair lhs, const ManSegPair& rhs)
+template<typename T>
+inline double operator+(ManSegPair lhs, const T& rhs)
 {
     unsigned int h = lhs.head;
     unsigned int t = lhs.tail;
@@ -208,7 +304,8 @@ inline double operator+(ManSegPair lhs, const ManSegPair& rhs)
     return d;
 }
 
-double ManSegPair::operator-=(const ManSegPair& rhs)
+template<typename T>
+double ManSegPair::operator-=(const T& rhs)
 {
     double d = *this;
     d -= rhs;
@@ -216,7 +313,8 @@ double ManSegPair::operator-=(const ManSegPair& rhs)
     return d;
 }
 
-inline double operator-(ManSegPair lhs, const ManSegPair& rhs)
+template<typename T>
+inline double operator-(ManSegPair lhs, const T& rhs)
 {
     unsigned int h = lhs.head;
     unsigned int t = lhs.tail;
@@ -226,7 +324,8 @@ inline double operator-(ManSegPair lhs, const ManSegPair& rhs)
     return d;
 }
 
-double ManSegPair::operator*=(const ManSegPair& rhs)
+template<typename T>
+double ManSegPair::operator*=(const T& rhs)
 {
     double d = *this;
     d *= rhs;
@@ -234,7 +333,8 @@ double ManSegPair::operator*=(const ManSegPair& rhs)
     return d;
 }
 
-inline double operator*(ManSegPair lhs, const ManSegPair& rhs)
+template<typename T>
+inline double operator*(ManSegPair lhs, const T& rhs)
 {
     unsigned int h = lhs.head;
     unsigned int t = lhs.tail;
@@ -244,7 +344,8 @@ inline double operator*(ManSegPair lhs, const ManSegPair& rhs)
     return d;
 }
 
-double ManSegPair::operator/=(const ManSegPair& rhs)
+template<typename T>
+double ManSegPair::operator/=(const T& rhs)
 {
     double d = *this;
     d /= rhs;
@@ -252,7 +353,8 @@ double ManSegPair::operator/=(const ManSegPair& rhs)
     return d;
 }
 
-inline double operator/(ManSegPair lhs, const ManSegPair& rhs)
+template<typename T>
+inline double operator/(ManSegPair lhs, const T& rhs)
 {
     unsigned int h = lhs.head;
     unsigned int t = lhs.tail;
@@ -265,26 +367,138 @@ inline double operator/(ManSegPair lhs, const ManSegPair& rhs)
 /**
  * ManSegArray functions
 */
-void ManSegArray::setHead(size_t id, double d)
+
+/**
+ * false specialisation
+ * (heads only)
+*/
+template<>
+void ManSegBase<false>::set(size_t id, double d)
 {
     const size_t l = *reinterpret_cast<const size_t*>(&d);
-    heads[id] = l >> segmentBits;
+    heads[id] = (l >> segmentBits);
 }
 
-double ManSegArray::readHead(size_t id)
+template<>
+void ManSegBase<false>::set(size_t id, float f)
 {
-    return static_cast<double>(ManSegHead(heads[id]));
+    double d = f;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = (l >> segmentBits);
 }
 
-void ManSegArray::setPair(size_t id, double d)
+template<>
+void ManSegBase<false>::set(size_t id, int i)
+{
+    double d = i;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = (l >> segmentBits);
+}
+
+template<>
+void ManSegBase<false>::set(size_t id, long li)
+{
+    double d = li;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = (l >> segmentBits);
+}
+
+template<bool useTail>
+void ManSegBase<useTail>::setPair(size_t id, double d)
 {
     const size_t l = *reinterpret_cast<const size_t*>(&d);
-    
     heads[id] = l >> segmentBits;
     tails[id] = (l & tailMask);
 }
 
-double ManSegArray::readPair(size_t id)
+template<bool useTail>
+void ManSegBase<useTail>::setPair(size_t id, float f)
+{
+    double d = f;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<bool useTail>
+void ManSegBase<useTail>::setPair(size_t id, int i)
+{
+    double d = i;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<bool useTail>
+void ManSegBase<useTail>::setPair(size_t id, long li)
+{
+    double d = li;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<>
+double ManSegBase<false>::read(size_t id)
+{
+    return static_cast<double>(ManSegHead(heads[id]));
+}
+
+template<>
+ManSegBase<true>* ManSegBase<false>::updoot()
+{
+    return new ManSegBase<true>(this->heads, this->tails);
+}
+
+/**
+ * true specialisation
+ * (heads + tails)
+*/
+template<>
+void ManSegBase<true>::set(size_t id, double d)
+{
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<>
+void ManSegBase<true>::set(size_t id, float f)
+{
+    double d = f;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<>
+void ManSegBase<true>::set(size_t id, int i)
+{
+    double d = i;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<>
+void ManSegBase<true>::set(size_t id, long li)
+{
+    double d = li;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<>
+double ManSegBase<true>::read(size_t id)
 {
     return static_cast<double>(ManSegPair(heads[id], tails[id]));
+}
+
+template<>
+ManSegBase<true>* ManSegBase<true>::updoot()
+{
+    // this doesn't do anything but needs to be here
+    // because of the template type 
+    return this;
 }
