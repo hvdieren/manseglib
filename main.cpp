@@ -20,24 +20,22 @@ void printBinary(double d)
 
 int main()
 {
-    const size_t size = 10;
-    srand(1);
-
+    std::cout << std::fixed << std::setprecision(16);
+    const size_t size = 10000000UL;
+ 
     ManSegArray* arr = new ManSegBase<false>(size);
     ManSegArray* arr2 = new ManSegBase<false>(size);
     double* darr = new double[size];
     double* darr2 = new double[size];
-    bool arbitraryPrecisionIncrease = false;
 
+    srand(1);
     for(size_t i = 0; i < size; ++i)
     {
         double val = (static_cast<double>(rand()) / RAND_MAX);
-
         darr[i] = val;
         arr->setPair(i, val);
 
         val += 2.0;
-
         arr2->setPair(i, val);
         darr2[i] = val;
     }
@@ -45,35 +43,31 @@ int main()
     //     head sum     pair sum   std double sum
     double hsum = 0.0, psum = 0.0, dsum = 0.0;
 
-    std::cout << "starting sums" << std::endl;
+    // std::cout << "starting sums" << std::endl;
     for(size_t i = 0; i < size; ++i)
-        hsum += ((arr->read(i) + arr2->read(i)));
-
-    arbitraryPrecisionIncrease = true;
-
-    // TODO: swap precision -> true
-    // not sure how you promote from ManSegArray<false> -> ManSegArray<true>
-    if(arbitraryPrecisionIncrease)
-    {
-        arr = arr->updoot();
-        arr2 = arr2->updoot();
-    }
-
-    for(size_t i = 0; i < size; ++i)
-        psum += ((arr->read(i) + arr2->read(i)));
-
-    for(size_t i = 0; i < size; ++i)
-        dsum += (darr[i] + darr2[i]);
+        hsum += (arr->read(i) + arr2->read(i));
 
     std::cout << std::fixed << std::setprecision(16);
     std:: cout << "heads only =\t" << hsum << "        ";
     printBinary(hsum);
+
+    // arbitrary condition
+    arr = arr->updoot();
+    arr2 = arr2->updoot();
+
+    for(size_t i = 0; i < size; ++i)
+        psum += (arr->read(i) + arr2->read(i));
+
     std::cout << "heads+tails =\t" << psum << "        ";
     printBinary(psum);
+
+    for(size_t i = 0; i < size; ++i)
+        dsum += (darr[i] + darr2[i]);
+    
     std::cout << "std double =\t" << dsum << "        ";
     printBinary(dsum);
 
-    // delete arr, arr2;
+    delete arr, arr2;
     delete[] darr, darr2;
 
     return 0;

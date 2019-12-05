@@ -11,9 +11,6 @@ public:
         :head(head)
     {}
 
-    // todo: template, but will need to be specialised.
-    // manseghead/manseghead needs specialisation can stay as it is
-    // if rhs = double or float or int, need to convert to manseghead then take head 
     template<typename T>
     ManSegHead& operator=(const T& rhs);
     template<typename T>
@@ -26,7 +23,7 @@ public:
     double operator*=(const T& rhs);
     template<typename T>
     double operator/=(const T& rhs);
-    
+
     operator double() const
     {
         size_t l = head;
@@ -75,6 +72,11 @@ public:
 class ManSegArray
 {
 public:
+    // how to define [] and = operators
+    // still giving me trouble figuring out how to do this.
+
+    virtual const ManSegArray& operator=(const ManSegArray& rhs) = 0;
+
     virtual void set(size_t id, double d) = 0;
     virtual void set(size_t id, float f) = 0;
     virtual void set(size_t id, int i) = 0;
@@ -87,6 +89,9 @@ public:
 
     virtual double read(size_t id) = 0;
     virtual ManSegArray* updoot() = 0;
+
+    unsigned int* heads;
+    unsigned int* tails;
 };
 
 template<bool useTail = false>
@@ -97,17 +102,30 @@ public:
     {
         heads = new unsigned int[length];
         tails = new unsigned int[length];
+
     }
 
     ManSegBase(unsigned int* heads, unsigned int* tails)
         :heads(heads), tails(tails)
-    {
-    }
+    {}
 
     ~ManSegBase()
     {
         delete[] heads, tails;
     }
+
+    // experimental: and by that i mean i can't get it working
+    virtual const ManSegArray& operator=(const ManSegArray& rhs) override
+    {
+        unsigned int* h = rhs.heads;
+        unsigned int* t = rhs.tails;
+        heads = h;
+        tails = t;
+
+        return *this;
+    }
+
+    // return manseghead/tail in operator[]
 
     virtual void set(size_t id, double d) override;
     virtual void set(size_t id, float f) override;
@@ -123,14 +141,17 @@ public:
 
     virtual ManSegBase<true>* updoot() override;
 
+
+    unsigned int* heads;
+    unsigned int* tails;
+
 private:
-    unsigned int *heads;
-    unsigned int *tails;
     static constexpr int segmentBits = 32;
     static constexpr unsigned int tailMask = ~0; // todo: should getBits() ?
     static constexpr size_t headMask = static_cast<unsigned long>(tailMask) << segmentBits;
 
 };
+
 
 /**
  * ManSegHead functions
@@ -170,17 +191,6 @@ double ManSegHead::operator+=(const T& rhs)
 
     return d;
 }
-
-/*
-    inline double operator+(ManSegHead lhs, const ManSegHead& rhs)
-    {
-        unsigned int h = lhs.head;
-        ManSegHead result(h);
-        result += rhs;
-
-        return static_cast<double>(result);
-    }
-*/
 
 template<typename T>
 inline double operator+(ManSegHead lhs, const T& rhs)
@@ -364,6 +374,7 @@ inline double operator/(ManSegPair lhs, const T& rhs)
     return d;
 }
 
+
 /**
  * ManSegArray functions
 */
@@ -398,44 +409,9 @@ void ManSegBase<false>::set(size_t id, int i)
 template<>
 void ManSegBase<false>::set(size_t id, long li)
 {
-    double d = li;
-    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    // double d = li;
+    const size_t l = *reinterpret_cast<const size_t*>(&li);
     heads[id] = (l >> segmentBits);
-}
-
-template<bool useTail>
-void ManSegBase<useTail>::setPair(size_t id, double d)
-{
-    const size_t l = *reinterpret_cast<const size_t*>(&d);
-    heads[id] = l >> segmentBits;
-    tails[id] = (l & tailMask);
-}
-
-template<bool useTail>
-void ManSegBase<useTail>::setPair(size_t id, float f)
-{
-    double d = f;
-    const size_t l = *reinterpret_cast<const size_t*>(&d);
-    heads[id] = l >> segmentBits;
-    tails[id] = (l & tailMask);
-}
-
-template<bool useTail>
-void ManSegBase<useTail>::setPair(size_t id, int i)
-{
-    double d = i;
-    const size_t l = *reinterpret_cast<const size_t*>(&d);
-    heads[id] = l >> segmentBits;
-    tails[id] = (l & tailMask);
-}
-
-template<bool useTail>
-void ManSegBase<useTail>::setPair(size_t id, long li)
-{
-    double d = li;
-    const size_t l = *reinterpret_cast<const size_t*>(&d);
-    heads[id] = l >> segmentBits;
-    tails[id] = (l & tailMask);
 }
 
 template<>
@@ -444,11 +420,6 @@ double ManSegBase<false>::read(size_t id)
     return static_cast<double>(ManSegHead(heads[id]));
 }
 
-template<>
-ManSegBase<true>* ManSegBase<false>::updoot()
-{
-    return new ManSegBase<true>(this->heads, this->tails);
-}
 
 /**
  * true specialisation
@@ -483,8 +454,8 @@ void ManSegBase<true>::set(size_t id, int i)
 template<>
 void ManSegBase<true>::set(size_t id, long li)
 {
-    double d = li;
-    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    // double d = li;
+    const size_t l = *reinterpret_cast<const size_t*>(&li);
     heads[id] = l >> segmentBits;
     tails[id] = (l & tailMask);
 }
@@ -495,10 +466,47 @@ double ManSegBase<true>::read(size_t id)
     return static_cast<double>(ManSegPair(heads[id], tails[id]));
 }
 
-template<>
-ManSegBase<true>* ManSegBase<true>::updoot()
+
+/**
+ *  Common functions 
+*/
+template<bool useTail>
+void ManSegBase<useTail>::setPair(size_t id, double d)
 {
-    // this doesn't do anything but needs to be here
-    // because of the template type 
-    return this;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<bool useTail>
+void ManSegBase<useTail>::setPair(size_t id, float f)
+{
+    double d = f;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<bool useTail>
+void ManSegBase<useTail>::setPair(size_t id, int i)
+{
+    double d = i;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<bool useTail>
+void ManSegBase<useTail>::setPair(size_t id, long li)
+{
+    // double d = li;
+    const size_t l = *reinterpret_cast<const size_t*>(&li);
+    heads[id] = l >> segmentBits;
+    tails[id] = (l & tailMask);
+}
+
+template<bool useTail>
+ManSegBase<true>* ManSegBase<useTail>::updoot()
+{
+    return new ManSegBase<true>(heads, tails);
 }
