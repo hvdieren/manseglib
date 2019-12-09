@@ -4,7 +4,10 @@
 typedef unsigned long size_t;
 #endif
 
-class ManSegHead
+class ManSegType
+{};
+
+class ManSegHead : public ManSegType
 {
 public:
     ManSegHead(unsigned int& head)
@@ -36,7 +39,7 @@ public:
 
 };
 
-class ManSegPair
+class ManSegPair : public ManSegType
 {
 public:
     ManSegPair(unsigned int& head, unsigned int& tail)
@@ -75,6 +78,14 @@ public:
     // how to define [] and = operators
     // still giving me trouble figuring out how to do this.
 
+    // if we want to be able to manipulate values via references, the int& head and int& tail need to be replaced
+    // by a single size_t& val
+    // this *doubles* the memory requirements of heads, which probably defeats the purpose of "less bits being moved when performing arithmetic"
+    // and the "less memory used" thing
+
+    // alternatively, we try to get some kinda ManSegType inheritance working correctly, so we can access ManSeg**** functions through pointers
+    // but this has the same issue of, when we have ManSegHead/ManSegPair how do we modify the underlying values??
+
     virtual const ManSegArray& operator=(const ManSegArray& rhs) = 0;
 
     virtual void set(size_t id, double d) = 0;
@@ -102,7 +113,6 @@ public:
     {
         heads = new unsigned int[length];
         tails = new unsigned int[length];
-
     }
 
     ManSegBase(unsigned int* heads, unsigned int* tails)
