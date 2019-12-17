@@ -58,17 +58,6 @@ public:
     virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
     {
         int src, dest;
-        // pre calculate contribution
-        /*
-        for(int i = 0; i < numEdges; ++i)
-        {
-            s = source[i];
-            contr[s] = d*(x[s]/outdeg[s]);
-        }
-        */
-        
-        // pre calculating contribution doesn't help for coo
-        // does it?
         for(int i = 0; i < numEdges; ++i)
         {
             src = source[i];
@@ -251,6 +240,7 @@ double normDiff(double* a, double* b, int& n)
 int main(int argc, char** argv)
 {
     cout << setprecision(16);
+    cerr << setprecision(16);
 
     if(argc < 3)
     {
@@ -349,6 +339,9 @@ int main(int argc, char** argv)
 
     if(delta > tol)
         cerr << "error: solution has not converged" << endl;
+
+    // for(int i = 0; i < n; ++i)
+    //     cerr << i << " " << x[i] << endl;
 
     return 0;
 }
