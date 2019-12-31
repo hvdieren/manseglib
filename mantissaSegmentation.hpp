@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #ifndef size_t
 typedef unsigned long size_t;
 #endif
@@ -91,19 +93,16 @@ public:
         tails = new unsigned int[length];
     }
 
+    // TODO: need to update this once you figure out how to fix the ManSegBase<true> one
     ManSegBase(unsigned int* heads, unsigned int* tails)
         :heads(heads), tails(tails)
     {
-        copiedFrom = true;
     }
 
     ~ManSegBase()
     {
-        if(!copiedFrom)
-        {
-            if(heads) delete[] heads;
-            if(tails) delete[] tails;
-        }
+        heads = nullptr;
+        tails = nullptr;
     }
 
     const ManSegBase<false>& operator=(const ManSegBase<false>& rhs)
@@ -133,10 +132,13 @@ public:
 
     ManSegBase<true> updoot();
 
+    void freeMemory();
+
+    // friend class ManSegBase<true>;
+
 private:
     unsigned int* heads;
     unsigned int* tails;
-    bool copiedFrom = false; // added this to fix dangling pointer issue. one extra bit per array is fine, right?
 
     static constexpr int segmentBits = 32;
     static constexpr unsigned int tailMask = ~0;
@@ -157,16 +159,12 @@ public:
     ManSegBase(unsigned int* heads, unsigned int* tails)
         :heads(heads), tails(tails)
     {
-        copiedFrom = true;
     }
 
     ~ManSegBase()
     {
-        if(!copiedFrom)
-        {
-            if(heads) delete[] heads;
-            if(tails) delete[] tails;
-        }
+        heads = nullptr;
+        tails = nullptr;
     }
 
     const ManSegBase<true>& operator=(const ManSegBase<true>& rhs)
@@ -197,10 +195,11 @@ public:
 
     ManSegBase<true> updoot();
 
+    void freeMemory();
+
 private:
     unsigned int* heads;
     unsigned int* tails;
-    bool copiedFrom = false;
 
     static constexpr int segmentBits = 32;
     static constexpr unsigned int tailMask = ~0;
@@ -229,6 +228,20 @@ ManSegHead& ManSegHead::operator=(const ManSegPair& other)
     if(&head != &other.head)
     {
         unsigned int h = other.head;
+        head = h;
+    }
+    return *this;
+}
+
+template<typename T>
+ManSegHead& ManSegHead::operator=(const T&& other) noexcept
+{
+    double d = other;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    unsigned int h = (l >> segmentBits);
+
+    if(head != h)
+    {
         head = h;
     }
     return *this;
@@ -268,8 +281,11 @@ ManSegHead& ManSegHead::operator=(const T& rhs)
 template<typename T>
 double ManSegHead::operator+=(const T& rhs)
 {
-    double d = *this;
-    d += rhs;
+    double d = rhs;
+    double t = *this;
+
+    t += d;
+    *this = t;
 
     return d;
 }
@@ -287,8 +303,11 @@ inline double operator+(ManSegHead lhs, const T& rhs)
 template<typename T>
 double ManSegHead::operator-=(const T& rhs)
 {
-    double d = *this;
-    d -= rhs;
+    double d = rhs;
+    double t = *this;
+
+    t -= d;
+    *this = t;
 
     return d;
 }
@@ -306,8 +325,11 @@ inline double operator-(ManSegHead lhs, const T& rhs)
 template<typename T>
 double ManSegHead::operator*=(const T& rhs)
 {
-    double d = *this;
-    d *= rhs;
+    double d = rhs;
+    double t = *this;
+
+    t *= d;
+    *this = t;
 
     return d;
 }
@@ -325,8 +347,11 @@ inline double operator*(ManSegHead lhs, const T& rhs)
 template<typename T>
 double ManSegHead::operator/=(const T& rhs)
 {
-    double d = *this;
-    d /= rhs;
+    double d = rhs;
+    double t = *this;
+
+    t /= d;
+    *this = t;
 
     return d;
 }
@@ -369,6 +394,22 @@ ManSegPair& ManSegPair::operator=(const ManSegHead& other)
     return *this;
 }
 
+template<typename T>
+ManSegPair& ManSegPair::operator=(const T&& other) noexcept
+{
+    double d = other;
+    const size_t l = *reinterpret_cast<const size_t*>(&d);
+    unsigned int h = (l >> segmentBits);
+    unsigned int t = (l & tailMask);
+
+    if(head != h || tail != t)
+    {
+        head = h;
+        tail = t;
+    }
+    return *this;
+}
+
 template<>
 ManSegPair& ManSegPair::operator=(const ManSegPair&& other) noexcept
 {
@@ -407,8 +448,11 @@ ManSegPair& ManSegPair::operator=(const T& rhs)
 template <typename T>
 double ManSegPair::operator+=(const T& rhs)
 {
-    double d = *this;
-    d += rhs;
+    double d = rhs;
+    double t = *this;
+
+    t += d;
+    *this = t;
 
     return d;
 }
@@ -427,8 +471,11 @@ inline double operator+(ManSegPair lhs, const T& rhs)
 template<typename T>
 double ManSegPair::operator-=(const T& rhs)
 {
-    double d = *this;
-    d -= rhs;
+    double d = rhs;
+    double t = *this;
+
+    t -= d;
+    *this = t;
 
     return d;
 }
@@ -447,8 +494,11 @@ inline double operator-(ManSegPair lhs, const T& rhs)
 template<typename T>
 double ManSegPair::operator*=(const T& rhs)
 {
-    double d = *this;
-    d *= rhs;
+    double d = rhs;
+    double t = *this;
+
+    t *= d;
+    *this = t;
 
     return d;
 }
@@ -467,8 +517,11 @@ inline double operator*(ManSegPair lhs, const T& rhs)
 template<typename T>
 double ManSegPair::operator/=(const T& rhs)
 {
-    double d = *this;
-    d /= rhs;
+    double d = rhs;
+    double t = *this;
+
+    t /= d;
+    *this = t;
 
     return d;
 }
@@ -566,6 +619,12 @@ ManSegBase<true> ManSegBase<false>::updoot()
     return ManSegBase<true>(heads, tails);
 }
 
+void ManSegBase<false>::freeMemory()
+{
+    if(heads) delete[] heads;
+    if(tails) delete[] tails;
+}
+
 
 /**
  * true specialisation
@@ -646,4 +705,10 @@ ManSegPair ManSegBase<true>::operator[](size_t id)
 ManSegBase<true> ManSegBase<true>::updoot()
 {
     return *this;
+}
+
+void ManSegBase<true>::freeMemory()
+{
+    if(heads) delete[] heads;
+    if(tails) delete[] tails;
 }

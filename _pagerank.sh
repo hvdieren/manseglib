@@ -25,8 +25,8 @@ echo "std version"
 # ./pagerank CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/LiveJournal_dir.csc"
 # ./pagerank CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/rMatGraph_J_5_100.csc"
 
-# echo ""
-# echo "msa version"
+echo ""
+echo "msa version"
 # msa version
 # COO
 ./msa_pagerank COO "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/smallGraph.coo"

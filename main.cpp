@@ -46,9 +46,6 @@ void test1()
 
     ManSegBase<false> arr(size);
     ManSegBase<false> arr2(size);
-    // setup whatever precisions you need/want
-    ManSegBase<true> tarr = arr.updoot();
-    ManSegBase<true> tarr2 = arr2.updoot();
 
     double* darr = new double[size];
     double* darr2 = new double[size];
@@ -67,12 +64,27 @@ void test1()
     }
 
     std::cout << "heads only" << std::endl;
+    // the destructor is being called as arr is being passed by value
+    // this deletes the references to the array
     f(arr, arr2, darr, darr2, size);
+
+    std::cout << "heads only" << std::endl;
+    f(arr, arr2, darr, darr2, size);
+
+    // setup whatever precisions you need/want
+    ManSegBase<true> tarr = arr.updoot();
+    ManSegBase<true> tarr2 = arr2.updoot();
 
     std::cout << "\npairs" << std::endl;
     f(tarr, tarr2, darr, darr2, size);
 
+    std::cout << "pairs" << std::endl;
+    f(tarr, tarr2, darr, darr2, size);
+
     delete[] darr, darr2;
+
+    arr.freeMemory();
+    arr2.freeMemory();
 }
 
 void test2()
@@ -101,6 +113,7 @@ void test2()
         d2[i] = val;
     }
 
+    // copy values
     for(size_t i = 0; i < size; ++i)
     {
         double val = (static_cast<double>(rand()) / RAND_MAX);
@@ -110,29 +123,99 @@ void test2()
 
     for(size_t i = 0; i < size; ++i)
     {
-        std::cout << "arr[" << i << "]=" << arr[i] << std::endl;
+        std::cout << "arr[" << i << "]=" << arr[i] << " == arr3[" << i << "]=" << arr3[i] << std::endl;
         std::cout << "arr2[" << i << "]=" << arr2[i] << std::endl;
-        std::cout << "arr3[" << i << "]=" << arr3[i] << std::endl;
+        // std::cout << "arr3[" << i << "]=" << arr3[i] << std::endl;
     }
     std::cout << "\n\n";
     for(size_t i = 0; i < size; ++i)
     {
-        std::cout << "d[" << i << "]=" << d[i] << std::endl;
+        std::cout << "d[" << i << "]=" << d[i] << " == d3[" << i << "]=" << d3[i] << std::endl;
         std::cout << "d2[" << i << "]=" << d2[i] << std::endl;
-        std::cout << "d3[" << i << "]=" << d3[i] << std::endl;
+        // std::cout << "d3[" << i << "]=" << d3[i] << std::endl;
+    }
+
+    arr.freeMemory();
+    arr2.freeMemory();
+    arr3.freeMemory();
+}
+
+void test3()
+{
+    ManSegBase<false> x(5);
+    ManSegBase<true>y = x.updoot();
+
+    y[0] = 1.26;
+    y.setPair(1, 1.26);
+    y[2] = 2.5;
+    x[3] = 1.22;
+    y.set(4, 1.22);
+
+    for(int i = 0; i < 5; ++i)
+        std::cout << y[i] << std::endl;
+}
+
+void test4()
+{
+    ManSegBase<false> x(10);
+    ManSegBase<true> y = x.updoot();
+
+    double d[10];
+
+    for(int i = 0; i < 10; ++i)
+    {
+        y[i] = (i+1);
+        d[i] = (i+1);
+        std::cout<<"y["<<i<<"]="<<y[i]<<std::endl;
+    }
+    std::cout << "\n\n";
+
+    for(int i = 0; i < 10; ++i)
+    {
+        // +=
+        d[i] += 0.85*(d[i]+d[0]/0.5);
+        x[i] += 0.85*(x[i]+x[0]/0.5);
+        // y[i] += 0.85*(y[i]+y[0]/0.5);
+        
+        // -=
+        d[i] -= 0.85;
+        x[i] -= 0.85;
+        // y[i] -= 0.85;
+        
+        // *=
+        d[i] *= 1.5;
+        x[i] *= 1.5;
+        // y[i] *= 1.5;
+        
+        // /=
+        d[i] /= 2;
+        x[i] /= 2;
+        // y[i] /= 2;
+
+        std::cout<<"d["<<i<<"]="<<d[i]<<std::endl;
+        std::cout<<"x["<<i<<"]="<<x[i]<<std::endl<<std::endl;
+        // std::cout<<"y["<<i<<"]="<<y[i]<<std::endl<<std::endl;
+
     }
 }
 
 int main()
 {
-    // test1(); // comparing manseg sum to std double sum & manseg conversion
-
-    test2(); // checking array assignments
+    // test1(); // comparing manseg sum to std double sum & manseg conversion (static assigned)
+    // test2(); // checking array to array assignments
+    // test3(); // initialisation 
+    test4();    // checking to other assignment works correctly (i.e. x[i] += 2 and such)
 
     return 0;
 }
 
 // TODO:
+// Can probably rename ManSegBase to ManSegArray since there is no encapsuling thing anymore
+// unless you want the wrapper thing you'd talked about which holds refs to low and high precision or whatever
+// but that might not be so good if multiple precisions in future or whatever
+
+// I think this still applies, but with pointer version of ManSegBase
+
 // need to fix assignment operators for ManSegHead/ManSegPair
 // when accessing values via [] they do not allow assignment properly
 // i.e. arr[i] = arr2[i] without casting

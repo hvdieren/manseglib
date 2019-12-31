@@ -62,8 +62,10 @@ public:
         {
             src = source[i];
             dest = destination[i];
+            cout << "val="<<newPr[dest]<<"\n";
             newPr[dest] += d*(prevPr[src]/outdeg[src]);
         }
+        cout << "\n";
     }
 
 
@@ -340,8 +342,8 @@ int main(int argc, char** argv)
     if(delta > tol)
         cerr << "error: solution has not converged" << endl;
 
-    // for(int i = 0; i < n; ++i)
-    //     cerr << i << " " << x[i] << endl;
+    for(int i = 0; i < n; ++i)
+        cerr << i << " " << x[i] << endl;
 
     return 0;
 }
