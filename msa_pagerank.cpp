@@ -78,7 +78,6 @@ public:
             dest = destination[i];
             newPr[dest] += d*(prevPr[src]/outdeg[src]);
         }
-        cout << "\n";
     }
 
 
@@ -337,8 +336,8 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
 
     for(int i = 0; i < n; ++i)
     {
-        x_t[i] = (1.0 / (double)(n));
-        v_t[i] = x_t[i];                // <-- this had to be split because chaining isn't quite correct
+        v_t[i] = x_t[i] = (1.0 / (double)(n));
+        // v_t[i] = x_t[i];                // <-- this had to be split because chaining isn't quite correct
                                         //     this should be fixed, since there's some function not defined correctly
         outdeg[i] = y_t[i] = 0.0;       // there is some weirdness going on with assignment still.. unless it's compiler based?
     }
@@ -351,26 +350,53 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     tmStart = chrono::high_resolution_clock::now();
 
     auto iterateS = chrono::high_resolution_clock::now();
+    bool sw = false;
     while(iter < maxIter && delta > tol)
     {
-        matrix->iterate(d, x_t, y_t, outdeg, contr_t);
-
-        double w = (1.0 - sum(y_t, n));
-        for(int i = 0; i < n; ++i)
-            y_t[i] += w * v_t[i];
-
-        delta = normDiff(x_t, y_t, n);
-        ++iter;
-
-        for(int i = 0; i < n; ++i)
+        if(!sw)
         {
-            x_t[i] = y_t[i];
-            y_t[i] = 0.0;
-        }
+            matrix->iterate(d, x_f, y_f, outdeg, contr_f);
 
-        auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
-        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_t, n) 
-            << " time=" << tmStep << " seconds" << endl;
+            double w = (1.0 - sum(y_f, n));
+            for(int i = 0; i < n; ++i)
+                y_f[i] += w * v_f[i];
+
+            delta = normDiff(x_f, y_f, n);
+            ++iter;
+            
+            if(delta <= 1e-5) sw = true; // i think this is the limit of precision heads only can do
+
+            for(int i = 0; i < n; ++i)
+            {
+                x_f[i] = y_f[i];
+                y_f[i] = 0.0;
+            }
+
+            auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
+            cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_f, n) 
+                << " time=" << tmStep << " seconds" << endl;
+        }
+        else
+        {
+            matrix->iterate(d, x_t, y_t, outdeg, contr_t);
+
+            double w = (1.0 - sum(y_t, n));
+            for(int i = 0; i < n; ++i)
+                y_t[i] += w * v_t[i];
+
+            delta = normDiff(x_t, y_t, n);
+            ++iter;
+
+            for(int i = 0; i < n; ++i)
+            {
+                x_t[i] = y_t[i];
+                y_t[i] = 0.0;
+            }
+
+            auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
+            cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_t, n) 
+                << " time=" << tmStep << " seconds" << endl;
+        }
 
         tmStart = chrono::high_resolution_clock::now();
     }
@@ -400,9 +426,6 @@ int main(int argc, char** argv)
         cerr << "usage: ./msa_pagerank <format> <input_file>" << endl;
         return 1;
     }
-
-    // todo: change this to just use static values for testing
-    // then, investigate += and other functions which apparently don't work
 
     string format = argv[1];
     string inputFile = argv[2];

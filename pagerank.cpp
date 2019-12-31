@@ -62,10 +62,8 @@ public:
         {
             src = source[i];
             dest = destination[i];
-            cout << "val="<<newPr[dest]<<"\n";
             newPr[dest] += d*(prevPr[src]/outdeg[src]);
         }
-        cout << "\n";
     }
 
 

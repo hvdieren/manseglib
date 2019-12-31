@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-
 #ifndef size_t
 typedef unsigned long size_t;
 #endif
@@ -51,6 +49,8 @@ public:
         :head(head), tail(tail)
     {}
 
+
+    ManSegPair& operator=(const ManSegPair& rhs);
     template<typename T>
     ManSegPair& operator=(const T& rhs);
     template<typename T>
@@ -369,7 +369,6 @@ inline double operator/(ManSegHead lhs, const T& rhs)
 /**
  * ManSegPair functions
 */
-template<>
 ManSegPair& ManSegPair::operator=(const ManSegPair& other)
 {
     if(this != &other)
