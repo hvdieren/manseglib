@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <iterator>
+#include <regex>
 
 #include "mantissaSegmentation.hpp"
 
@@ -14,7 +15,13 @@ using namespace std;
 
 constexpr double d = 0.85;
 constexpr double tol = 1e-7;
+// constexpr double tol = 1e-10;
 constexpr int maxIter = 100;
+// constexpr int maxIter = 200;
+
+
+
+// double* npr, *opr, *cnt;
 
 class SparseMatrix
 {
@@ -60,24 +67,30 @@ public:
 
     virtual void iterate(double d, ManSegBase<false>& prevPr, ManSegBase<false>& newPr, int outdeg[], ManSegBase<false>& contr) override
     {
-        int src, dest;
         for(int i = 0; i < numEdges; ++i)
-        {
-            src = source[i];
-            dest = destination[i];
-            newPr[dest] += d*(prevPr[src]/outdeg[src]);
-        }
+            newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
+
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numEdges; ++i)
+        //     npr[destination[i]] += d*(opr[source[i]]/outdeg[source[i]]);
+
+        // newPr = npr;
     }
 
     virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) override
     {
-        int src, dest;
         for(int i = 0; i < numEdges; ++i)
-        {
-            src = source[i];
-            dest = destination[i];
-            newPr[dest] += d*(prevPr[src]/outdeg[src]);
-        }
+            newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
+
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numEdges; ++i)
+        //     npr[destination[i]] += d*(opr[source[i]]/outdeg[source[i]]);
+
+        // newPr = npr;
     }
 
 
@@ -137,14 +150,23 @@ public:
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
 
-        int curr, next;
         for(int i = 0; i < numVertices; ++i)
         {
-            curr = index[i];
-            next = index[i + 1];
-            for(int j = curr; j < next; ++j)
+            for(int j = index[i]; j < index[i + 1]; ++j)
                 newPr[dest[j]] += contr[i];
         }
+
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     cnt[i] = d*(opr[i]/outdeg[i]);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     for(int j = index[i]; j < index[i + 1]; ++j)
+        //         npr[dest[j]] += cnt[i];
+
+        // newPr = npr;
     }
 
     virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) override
@@ -152,14 +174,23 @@ public:
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
 
-        int curr, next;
         for(int i = 0; i < numVertices; ++i)
         {
-            curr = index[i];
-            next = index[i + 1];
-            for(int j = curr; j < next; ++j)
+            for(int j = index[i]; j < index[i + 1]; ++j)
                 newPr[dest[j]] += contr[i];
         }
+
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     cnt[i] = d*(opr[i]/outdeg[i]);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     for(int j = index[i]; j < index[i + 1]; ++j)
+        //         npr[dest[j]] += cnt[i];
+
+        // newPr = npr;
     }
 
 private:
@@ -218,14 +249,22 @@ public:
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
 
-        int curr, next;
         for(int i = 0; i < numVertices; ++i)
         {
-            curr = index[i];
-            next = index[i + 1];
-            for(int j = curr; j < next; ++j)
+            for(int j = index[i]; j < index[i + 1]; ++j)
                 newPr[i] += contr[source[j]];
         }
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     cnt[i] = d*(opr[i]/outdeg[i]);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     for(int j = index[i]; j < index[i + 1]; ++j)
+        //         npr[i] += cnt[source[j]];
+
+        // newPr = npr;
     }
 
     virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) override
@@ -233,14 +272,22 @@ public:
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
 
-        int curr, next;
         for(int i = 0; i < numVertices; ++i)
         {
-            curr = index[i];
-            next = index[i + 1];
-            for(int j = curr; j < next; ++j)
+            for(int j = index[i]; j < index[i + 1]; ++j)
                 newPr[i] += contr[source[j]];
         }
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     cnt[i] = d*(opr[i]/outdeg[i]);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     for(int j = index[i]; j < index[i + 1]; ++j)
+        //         npr[i] += cnt[source[j]];
+
+        // newPr = npr;
     }
 
 private:
@@ -249,21 +296,66 @@ private:
 };
 
 
-// double sum(double* a, int& n)
-// {
-//     double d = 0.0;
-//     double err = 0.0;
-//     for(int i = 0; i < n; ++i)
-//     {
-//         // does d += a[i] with high accuracy
-//         double temp = d;
-//         double y = a[i] + err;
-//         d = temp + y;
-//         err = temp - d;
-//         err += y;
-//     }
-//     return d;
-// }
+// SNAP reading version of things
+class SNAPSparseMatrixCOO : public SparseMatrix
+{
+public:
+    SNAPSparseMatrixCOO(string file)
+    {
+        ifstream f;
+        f.open(file, std::ios_base::in);
+        if(!f.is_open())
+        {
+            cerr << "error opening file in COO" << endl;
+            exit(1);
+        }
+        
+        string skipLine, nodes, edges;
+        getline(f, skipLine); // skip first line
+
+        f >> nodes >> edges;
+        getline(f, skipLine);
+
+        string n = regex_replace(nodes, regex("[^0-9]*([0-9]+).*"), "$1");
+        numVertices = atoi(n.c_str());
+        
+        n = regex_replace(edges, regex("[^0-9]*([0-9]+).*"), "$1");
+        numEdges = atoi(n.c_str());
+
+        cout << "numVertices=" << numVertices << "\n";
+        cout << "numEdges=" << numEdges << "\n";
+
+        source = new int[numEdges];
+        destination = new int[numEdges];
+
+        for(int i = 0; i < numEdges; ++i)
+            f >> source[i] >> destination[i];
+    }
+
+    virtual void calculateOutDegree(int outdeg[]) override
+    {
+        for(int i = 0; i < numEdges; ++i)
+            ++outdeg[source[i]];
+    }
+
+    virtual void iterate(double d, ManSegBase<false>& prevPr, ManSegBase<false>& newPr, int outdeg[], ManSegBase<false>& contr) override
+    {
+        for(int i = 0; i < numEdges; ++i)
+            newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[destination[i]]);
+    }
+
+    virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) override
+    {
+        for(int i = 0; i < numEdges; ++i)
+            newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[destination[i]]);
+    }
+
+
+private:
+    int* source;
+    int* destination;
+};
+
 template<class ManSegBase>
 double sum(ManSegBase& a, int& n)
 {
@@ -281,21 +373,6 @@ double sum(ManSegBase& a, int& n)
     return d;
 }
 
-// double normDiff(double* a, double* b, int& n)
-// {
-//     double d = 0.0;
-//     double err = 0.0;
-//     for(int i = 0; i < n; ++i)
-//     {
-//         // does d += abs(b[i] - a[i]) with high accuracy
-//         double temp = d;
-//         double y = abs(b[i] - a[i]) + err;
-//         d = temp + y;
-//         err = temp - d;
-//         err += y;
-//     }
-//     return d;
-// }
 template<class ManSegBase>
 double normDiff(ManSegBase& a, ManSegBase& b, int& n)
 {
@@ -331,15 +408,17 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     ManSegBase<false>contr_f(n); // contribution for each vertex
     ManSegBase<true>contr_t = contr_f.updoot();
 
+    // npr = new double[n];
+    // opr = new double[n];
+    // cnt = new double[n];
+
     double delta = 2.0;
     int iter = 0;
 
     for(int i = 0; i < n; ++i)
     {
-        v_t[i] = x_t[i] = (1.0 / (double)(n));
-        // v_t[i] = x_t[i];                // <-- this had to be split because chaining isn't quite correct
-                                        //     this should be fixed, since there's some function not defined correctly
-        outdeg[i] = y_t[i] = 0.0;       // there is some weirdness going on with assignment still.. unless it's compiler based?
+        x_f[i] = v_t[i] = (1.0 / (double)(n));
+        outdeg[i] = y_f[i] = 0.0;
     }
 
     matrix->calculateOutDegree(outdeg);
@@ -350,10 +429,15 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     tmStart = chrono::high_resolution_clock::now();
 
     auto iterateS = chrono::high_resolution_clock::now();
-    bool sw = false;
+    
+    
+    // set this to true to only use full precision
+    bool changePrecision = false;
+    
+    
     while(iter < maxIter && delta > tol)
     {
-        if(!sw)
+        if(!changePrecision)
         {
             matrix->iterate(d, x_f, y_f, outdeg, contr_f);
 
@@ -364,7 +448,11 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
             delta = normDiff(x_f, y_f, n);
             ++iter;
             
-            if(delta <= 1e-5) sw = true; // i think this is the limit of precision heads only can do
+            if(delta <= 1e-5) 
+            {
+                changePrecision = true; // i think this is the limit of precision heads only can do
+                cout << "==========\nincreased precision\n==========\n";
+            }
 
             for(int i = 0; i < n; ++i)
             {
@@ -412,8 +500,13 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     if(delta > tol)
         cerr << "error: solution has not converged" << endl;
 
-    for(int i = 0; i < n; ++i)
-        cerr << i << " " << x_t[i] << endl;
+    // for(int i = 0; i < n; ++i)
+        // cerr << i << " " << x_t[i] << endl;
+
+    x_t.freeMemory();
+    y_t.freeMemory();
+    v_t.freeMemory();
+    contr_t.freeMemory();
 }
 
 int main(int argc, char** argv)
@@ -421,42 +514,73 @@ int main(int argc, char** argv)
     cout << setprecision(16);
     cerr << setprecision(16);
 
-    if(argc < 3)
+    if(argc < 4)
     {
-        cerr << "usage: ./msa_pagerank <format> <input_file>" << endl;
+        cerr << "usage: ./msa_pagerank <type> <format> <input_file>" << endl;
         return 1;
     }
 
-    string format = argv[1];
-    string inputFile = argv[2];
+    string type = argv[1];
+    string format = argv[2];
+    string inputFile = argv[3];
 
-    cout << "Format: " << format 
+    cout << "\nType: " << type
+    << "\nFormat: " << format 
     << "\nInput file: " << inputFile
     << endl;
 
     auto tmStart = chrono::high_resolution_clock::now();
 
     SparseMatrix* matrix;
-    if(format.compare("CSR") == 0)
+    if(type.compare("SNAP") == 0)
     {
-        matrix = new SparseMatrixCSR(inputFile);
-        pr(matrix, tmStart);
-    }
-    else if(format.compare("CSC") == 0)
-    {
-        matrix = new SparseMatrixCSC(inputFile);
-        pr(matrix, tmStart);
-    }
-    else if(format.compare("COO") == 0)
-    {
-        matrix = new SparseMatrixCOO(inputFile);
-        pr(matrix, tmStart);
+        if(format.compare("CSR") == 0)
+        {
+            // matrix = new SNAPSparseMatrixCSR(inputFile);
+            // pr(matrix, tmStart);
+        }
+        else if(format.compare("CSC") == 0)
+        {
+            // matrix = new SNAPSparseMatrixCSC(inputFile);
+            // pr(matrix, tmStart);
+        }
+        else if(format.compare("COO") == 0)
+        {
+            matrix = new SNAPSparseMatrixCOO(inputFile);
+            pr(matrix, tmStart);
+        }
+        else
+        {
+            cerr << "Unknown format: " << format << endl;
+            return 1;
+        }
     }
     else
     {
-        cerr << "Unknown format: " << format << endl;
-        return 1;
+        cout << "using default method...\n";
+        if(format.compare("CSR") == 0)
+        {
+            matrix = new SparseMatrixCSR(inputFile);
+            pr(matrix, tmStart);
+        }
+        else if(format.compare("CSC") == 0)
+        {
+            matrix = new SparseMatrixCSC(inputFile);
+            pr(matrix, tmStart);
+        }
+        else if(format.compare("COO") == 0)
+        {
+            matrix = new SparseMatrixCOO(inputFile);
+            pr(matrix, tmStart);
+        }
+        else
+        {
+            cerr << "Unknown format: " << format << endl;
+            return 1;
+        }
     }
+    
+    
 
     return 0;
 }

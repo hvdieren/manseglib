@@ -2,7 +2,7 @@ main: main.o
 	g++ -o main main.o
 
 main.o: main.cpp mantissaSegmentation.hpp
-	g++ -O4 -c main.cpp 
+	g++ -O2 -c main.cpp 
 
 pagerank: pagerank.o
 	g++ -o pagerank pagerank.o
