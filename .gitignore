@@ -1,5 +1,12 @@
 # :c
 .vscode/
 
+*.o
 main
-main.o
+pagerank
+msa_pagerank
+pagerank_parallel
+msa_pagerank_parallel
+_oldMantissaSegmentationTester.hpp
+_olderbackupMantissaSegmentation.hpp.BAK
+tests
