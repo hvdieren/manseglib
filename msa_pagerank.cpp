@@ -4,14 +4,12 @@
 
 #include <fstream>
 #include <string>
-#include <sstream>
-#include <vector>
-#include <iterator>
 #include <regex>
 
 #include "mantissaSegmentation.hpp"
 
 using namespace std;
+using namespace ManSeg;
 
 constexpr double d = 0.85;
 constexpr double tol = 1e-7;
@@ -19,16 +17,26 @@ constexpr double tol = 1e-7;
 constexpr int maxIter = 100;
 // constexpr int maxIter = 200;
 
-
-
 // double* npr, *opr, *cnt;
 
+// SNAP csc use:
+// convert into coo
+// then sort on dest
+// then convert to csc
+// initialisation will be slow, but should be O(n log n)
+
+// todo: convert this from virtual nonsense to standalone objects/classes
+// there isn't really any need for there to be inhertiance here,
+// considering SparseMatrix is an abstract.
+// just convert func pr() to be template
+// and instead of SparseMatrix* use T*
+// provided T has the functions it can be used..
 class SparseMatrix
 {
 public:
     virtual void calculateOutDegree(int outdeg[]) = 0;
-    virtual void iterate(double d, ManSegBase<false>& prevPr, ManSegBase<false>& newPr, int outdeg[], ManSegBase<false>& contr) = 0;
-    virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) = 0;
+    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) = 0;
+    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) = 0;
 
     int numVertices;
     int numEdges;
@@ -65,32 +73,16 @@ public:
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, ManSegBase<false>& prevPr, ManSegBase<false>& newPr, int outdeg[], ManSegBase<false>& contr) override
+    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
-
-        // prevPr.toNewDoubleArray(opr);
-        // newPr.toNewDoubleArray(npr);
-
-        // for(int i = 0; i < numEdges; ++i)
-        //     npr[destination[i]] += d*(opr[source[i]]/outdeg[source[i]]);
-
-        // newPr = npr;
     }
 
-    virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) override
+    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
-
-        // prevPr.toNewDoubleArray(opr);
-        // newPr.toNewDoubleArray(npr);
-
-        // for(int i = 0; i < numEdges; ++i)
-        //     npr[destination[i]] += d*(opr[source[i]]/outdeg[source[i]]);
-
-        // newPr = npr;
     }
 
 
@@ -145,7 +137,7 @@ public:
             outdeg[i] = (index[i + 1] - index[i]);
     }
 
-    virtual void iterate(double d, ManSegBase<false>& prevPr, ManSegBase<false>& newPr, int outdeg[], ManSegBase<false>& contr) override
+    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -155,21 +147,9 @@ public:
             for(int j = index[i]; j < index[i + 1]; ++j)
                 newPr[dest[j]] += contr[i];
         }
-
-        // prevPr.toNewDoubleArray(opr);
-        // newPr.toNewDoubleArray(npr);
-
-        // for(int i = 0; i < numVertices; ++i)
-        //     cnt[i] = d*(opr[i]/outdeg[i]);
-
-        // for(int i = 0; i < numVertices; ++i)
-        //     for(int j = index[i]; j < index[i + 1]; ++j)
-        //         npr[dest[j]] += cnt[i];
-
-        // newPr = npr;
     }
 
-    virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) override
+    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -179,18 +159,6 @@ public:
             for(int j = index[i]; j < index[i + 1]; ++j)
                 newPr[dest[j]] += contr[i];
         }
-
-        // prevPr.toNewDoubleArray(opr);
-        // newPr.toNewDoubleArray(npr);
-
-        // for(int i = 0; i < numVertices; ++i)
-        //     cnt[i] = d*(opr[i]/outdeg[i]);
-
-        // for(int i = 0; i < numVertices; ++i)
-        //     for(int j = index[i]; j < index[i + 1]; ++j)
-        //         npr[dest[j]] += cnt[i];
-
-        // newPr = npr;
     }
 
 private:
@@ -244,7 +212,7 @@ public:
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, ManSegBase<false>& prevPr, ManSegBase<false>& newPr, int outdeg[], ManSegBase<false>& contr) override
+    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -267,7 +235,7 @@ public:
         // newPr = npr;
     }
 
-    virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) override
+    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -338,13 +306,13 @@ public:
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, ManSegBase<false>& prevPr, ManSegBase<false>& newPr, int outdeg[], ManSegBase<false>& contr) override
+    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[destination[i]]);
     }
 
-    virtual void iterate(double d, ManSegBase<true>& prevPr, ManSegBase<true>& newPr, int outdeg[], ManSegBase<true>& contr) override
+    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[destination[i]]);
@@ -356,8 +324,8 @@ private:
     int* destination;
 };
 
-template<class ManSegBase>
-double sum(ManSegBase& a, int& n)
+template<class TwoSegmentArray>
+double sum(TwoSegmentArray& a, int& n)
 {
     double d = 0.0;
     double err = 0.0;
@@ -373,8 +341,8 @@ double sum(ManSegBase& a, int& n)
     return d;
 }
 
-template<class ManSegBase>
-double normDiff(ManSegBase& a, ManSegBase& b, int& n)
+template<class TwoSegmentArray>
+double normDiff(TwoSegmentArray& a, TwoSegmentArray& b, int& n)
 {
     double d = 0.0;
     double err = 0.0;
@@ -398,15 +366,15 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     tmStart = chrono::high_resolution_clock::now();
 
     int n = matrix->numVertices;
-    ManSegBase<false>x_f(n); // pagerank
-    ManSegBase<true>x_t = x_f.updoot();     // <--- should *more or less* equivalent to just creating true then assigning things
-    ManSegBase<false>v_f(n);                //      i.e. this should work fine and if it doesn't there's something wrong
-    ManSegBase<true>v_t = v_f.updoot();
-    ManSegBase<false>y_f(n); // new pagerank
-    ManSegBase<true>y_t = y_f.updoot();
+    TwoSegmentArray<false>x_f(n); // pagerank
+    TwoSegmentArray<true>x_t = x_f.increasePrecision();     // <--- should *more or less* equivalent to just creating true then assigning things
+    TwoSegmentArray<false>v_f(n);                //      i.e. this should work fine and if it doesn't there's something wrong
+    TwoSegmentArray<true>v_t = v_f.increasePrecision();
+    TwoSegmentArray<false>y_f(n); // new pagerank
+    TwoSegmentArray<true>y_t = y_f.increasePrecision();
     int* outdeg = new int[n];
-    ManSegBase<false>contr_f(n); // contribution for each vertex
-    ManSegBase<true>contr_t = contr_f.updoot();
+    TwoSegmentArray<false>contr_f(n); // contribution for each vertex
+    TwoSegmentArray<true>contr_t = contr_f.increasePrecision();
 
     // npr = new double[n];
     // opr = new double[n];
@@ -503,10 +471,10 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     // for(int i = 0; i < n; ++i)
         // cerr << i << " " << x_t[i] << endl;
 
-    x_t.freeMemory();
-    y_t.freeMemory();
-    v_t.freeMemory();
-    contr_t.freeMemory();
+    x_t.del();
+    y_t.del();
+    v_t.del();
+    contr_t.del();
 }
 
 int main(int argc, char** argv)

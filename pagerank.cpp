@@ -9,13 +9,15 @@
 #include <iterator>
 #include <regex>
 
+#include "quicksort.h"
+
 using namespace std;
 
 constexpr double d = 0.85;     // this is already a real-ish world precision
 constexpr double tol = 1e-7;
 // constexpr double tol = 1e-10;  // a more real-ish world precision
-// constexpr int maxIter = 100;
-constexpr int maxIter = 200;   // double potential iterations to counter this..?
+constexpr int maxIter = 100;
+// constexpr int maxIter = 200;   // double potential iterations to counter this..?
 
 class SparseMatrix
 {
@@ -389,37 +391,44 @@ public:
         cout << "numEdges=" << numEdges << "\n";
 
         index = new int[numVertices + 1];
-        source = new int[numEdges];
-
-        index[0] = 0; // first index
+        // source = new int[numEdges];
 
         getline(f, line);  // skip next line
 
-        int d;
+        // read in edges as COO
         int* src = new int[numEdges];
         int* dst = new int[numEdges];
 
         for(int i = 0; i < numEdges; ++i)
             f >> src[i] >> dst[i];
 
-        int sourcePos = 0;
-        for(int i = 0; i < numVertices; ++i) // for each vertice
+        // perform sort on dst, so we can create a CSC representation
+        quicksort_pair(src, dst, 0, (numEdges-1));
+
+        index[0] = 0; // first index
+        int indexPos = 0;
+        int edgeCounter = 0;
+        for(int i = 0; i < numEdges; ++i)
         {
-            for(int j = 0; j < numEdges; ++j) // go through all edges
-            {
-                if(dst[j] == i) // find edge where vertex is destination
-                    source[sourcePos++] = src[j]; // fill sources from current position
-            }
-            index[i + 1] = sourcePos;
+            while(indexPos < dst[i])
+                index[++indexPos] = (edgeCounter);
+            ++edgeCounter;
         }
 
-        // i can't think of a more efficient way to do this
-        // complexity too much for large graphs
-        // since we need it stored in opposite order
+        while(indexPos < (numVertices + 1))
+            index[++indexPos] = numEdges;
+
+        source = src;
+
+        // not super pretty but we need this for the same ordering as
+        // you would get with CSR/COO, otherwise deltas/pagerank values
+        // end up being off due to error
+        for(int i = 0; i < (numVertices); ++i)
+            quicksort(source, index[i], index[i+1]-1);
 
         f.close();
 
-        delete[] src, dst;
+        delete[] dst;
     }
 
     virtual void calculateOutDegree(int outdeg[]) override
@@ -487,7 +496,7 @@ int main(int argc, char** argv)
 
     if(argc < 4)
     {
-        cerr << "usage: ./msa_pagerank <type> <format> <input_file>" << endl;
+        cerr << "usage: ./pagerank <type> <format> <input_file>" << endl;
         return 1;
     }
 
@@ -611,7 +620,7 @@ int main(int argc, char** argv)
         cerr << "error: solution has not converged" << endl;
 
     // for(int i = 0; i < n; ++i)
-        // cerr << i << " " << x[i] << endl;
+    //     cerr << i << " " << x[i] << endl;
 
     return 0;
 }
