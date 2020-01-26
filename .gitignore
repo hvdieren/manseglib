@@ -6,6 +6,7 @@ results/
 *.o
 main
 pagerank
+pagerank_check
 msa_pagerank
 pagerank_parallel
 msa_pagerank_parallel
