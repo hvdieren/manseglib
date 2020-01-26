@@ -1,6 +1,8 @@
-# :c
+# dirs
 .vscode/
+results/
 
+# files
 *.o
 main
 pagerank
