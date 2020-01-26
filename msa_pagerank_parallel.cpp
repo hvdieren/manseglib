@@ -9,7 +9,7 @@
 #include "mantissaSegmentation.hpp"
 
 using namespace std;
-using namespace ManSeg;
+using namespace manseg;
 
 constexpr double d = 0.85;
 constexpr double tol = 1e-7;
@@ -77,12 +77,28 @@ public:
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
+
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numEdges; ++i)
+        //     npr[destination[i]] += d*(opr[source[i]]/outdeg[source[i]]);
+
+        // newPr = npr;
     }
 
     virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
+
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numEdges; ++i)
+        //     npr[destination[i]] += d*(opr[source[i]]/outdeg[source[i]]);
+
+        // newPr = npr;
     }
 
 
@@ -147,6 +163,18 @@ public:
             for(int j = index[i]; j < index[i + 1]; ++j)
                 newPr[dest[j]] += contr[i];
         }
+
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     cnt[i] = d*(opr[i]/outdeg[i]);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     for(int j = index[i]; j < index[i + 1]; ++j)
+        //         npr[dest[j]] += cnt[i];
+
+        // newPr = npr;
     }
 
     virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
@@ -159,6 +187,18 @@ public:
             for(int j = index[i]; j < index[i + 1]; ++j)
                 newPr[dest[j]] += contr[i];
         }
+
+        // prevPr.toNewDoubleArray(opr);
+        // newPr.toNewDoubleArray(npr);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     cnt[i] = d*(opr[i]/outdeg[i]);
+
+        // for(int i = 0; i < numVertices; ++i)
+        //     for(int j = index[i]; j < index[i + 1]; ++j)
+        //         npr[dest[j]] += cnt[i];
+
+        // newPr = npr;
     }
 
 private:
@@ -358,7 +398,7 @@ double normDiff(TwoSegmentArray& a, TwoSegmentArray& b, int& n)
     return d;
 }
 
-void pr(SparseMatrix* matrix, string inputFile, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::nanoseconds>& tmStart)
+void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::nanoseconds>& tmStart)
 {
     auto totalSt = tmStart;
     auto tmInput = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
@@ -468,25 +508,8 @@ void pr(SparseMatrix* matrix, string inputFile, std::chrono::time_point<std::chr
     if(delta > tol)
         cerr << "error: solution has not converged" << endl;
 
-    // write to file
-    string outPath = "";
-    for(int i = inputFile.length()-1; i >= 0; --i)
-    {
-        char c = inputFile.at(i);
-        if(c == '/' || c == '\\')
-            break;
-        outPath += c;
-    }
-    reverse(outPath.begin(), outPath.end());
-
-    ofstream of;
-    of.open(("./results/msa_" + outPath + ".prvals"));
-
-    of << setprecision(16);
-    for(int i = 0; i < n; ++i)
-        of << i << " " << x_t[i] << "\n";
-
-    of.close();
+    // for(int i = 0; i < n; ++i)
+        // cerr << i << " " << x_t[i] << endl;
 
     x_t.del();
     y_t.del();
@@ -522,17 +545,17 @@ int main(int argc, char** argv)
         if(format.compare("CSR") == 0)
         {
             // matrix = new SNAPSparseMatrixCSR(inputFile);
-            // pr(matrix, inputFile, tmStart);
+            // pr(matrix, tmStart);
         }
         else if(format.compare("CSC") == 0)
         {
             // matrix = new SNAPSparseMatrixCSC(inputFile);
-            // pr(matrix, inputFile, tmStart);
+            // pr(matrix, tmStart);
         }
         else if(format.compare("COO") == 0)
         {
             matrix = new SNAPSparseMatrixCOO(inputFile);
-            pr(matrix, inputFile, tmStart);
+            pr(matrix, tmStart);
         }
         else
         {
@@ -546,17 +569,17 @@ int main(int argc, char** argv)
         if(format.compare("CSR") == 0)
         {
             matrix = new SparseMatrixCSR(inputFile);
-            pr(matrix, inputFile, tmStart);
+            pr(matrix, tmStart);
         }
         else if(format.compare("CSC") == 0)
         {
             matrix = new SparseMatrixCSC(inputFile);
-            pr(matrix, inputFile, tmStart);
+            pr(matrix, tmStart);
         }
         else if(format.compare("COO") == 0)
         {
             matrix = new SparseMatrixCOO(inputFile);
-            pr(matrix, inputFile, tmStart);
+            pr(matrix, tmStart);
         }
         else
         {

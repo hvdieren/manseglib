@@ -10,6 +10,7 @@
 #include <regex>
 
 #include "quicksort.h"
+#include "omp.h"
 
 using namespace std;
 
@@ -64,12 +65,19 @@ public:
 
     virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
     {
-        int src, dest;
+        #pragma omp parallel for \
+            default(none) \
+            shared(newPr, prevPr, d, outdeg, contr)
         for(int i = 0; i < numEdges; ++i)
         {
-            src = source[i];
-            dest = destination[i];
-            newPr[dest] += d*(prevPr[src]/outdeg[src]);
+            int src = source[i];
+            int dest = destination[i];
+
+            // as you would expect, this cripples performance
+            #pragma omp critical (std_coo_iterate)
+            {
+                newPr[dest] += d*(prevPr[src]/outdeg[src]);
+            }
         }
     }
 
@@ -129,17 +137,21 @@ public:
 
     virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
     {
+        #pragma omp parallel for \
+            default(none) \
+            shared(d, prevPr, outdeg, contr)
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
 
-        int curr, next;
         for(int i = 0; i < numVertices; ++i)
         {
-            curr = index[i];
-            next = index[i + 1];
+            int curr = index[i];
+            int next = index[i + 1];
             for(int j = curr; j < next; ++j)
-                newPr[dest[j]] += contr[i];
-        }
+            {
+                newPr[dest[j]] += contr[i]; // not parallel, this is not great.
+            }   // would need to write into a temp array, and have each thread write their newPr part they calculated
+        }       // into the actual newPr value at the end
     }
 
 private:
@@ -197,14 +209,20 @@ public:
 
     virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
     {
+        #pragma omp parallel for \
+            default(none) \
+            shared(d, prevPr, outdeg, contr)
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
 
-        int curr, next;
+
+        #pragma omp parallel for \
+            default(none) \
+            shared(newPr, prevPr, outdeg, contr)
         for(int i = 0; i < numVertices; ++i)
         {
-            curr = index[i];
-            next = index[i + 1];
+            int curr = index[i];
+            int next = index[i + 1];
             for(int j = curr; j < next; ++j)
                 newPr[i] += contr[source[j]];
         }
@@ -267,12 +285,18 @@ public:
 
     virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
     {
-        int src, dest;
+        #pragma omp parallel for \
+            default(none) \
+            shared(newPr, prevPr, d, outdeg, contr) schedule(static)
         for(int i = 0; i < numEdges; ++i)
         {
-            src = source[i];
-            dest = destination[i];
-            newPr[dest] += d*(prevPr[src]/outdeg[src]);
+            int src = source[i];
+            int dest = destination[i];
+
+            #pragma omp critical (std_coo_iterate)
+            {
+                newPr[dest] += d*(prevPr[src]/outdeg[src]);
+            }
         }
     }
 
@@ -496,7 +520,7 @@ int main(int argc, char** argv)
 
     if(argc < 4)
     {
-        cerr << "usage: ./pagerank <type> <format> <input_file>" << endl;
+        cerr << "usage: ./pagerank_parallel <type> <format> <input_file>" << endl;
         return 1;
     }
 
@@ -619,25 +643,8 @@ int main(int argc, char** argv)
     if(delta > tol)
         cerr << "error: solution has not converged" << endl;
 
-    // write to file
-    string outPath = "";
-    for(int i = inputFile.length()-1; i >= 0; --i)
-    {
-        char c = inputFile.at(i);
-        if(c == '/' || c == '\\')
-            break;
-        outPath += c;
-    }
-    reverse(outPath.begin(), outPath.end());
-
-    ofstream of;
-    of.open(("./results/std_" + outPath + ".prvals"));
-
-    of << setprecision(16);
-    for(int i = 0; i < n; ++i)
-        of << i << " " << x[i] << "\n";
-
-    of.close();
+    // for(int i = 0; i < n; ++i)
+    //     cerr << i << " " << x[i] << endl;
 
     return 0;
 }

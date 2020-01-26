@@ -15,9 +15,7 @@ using namespace std;
 
 constexpr double d = 0.85;     // this is already a real-ish world precision
 constexpr double tol = 1e-7;
-// constexpr double tol = 1e-10;  // a more real-ish world precision
-constexpr int maxIter = 100;
-// constexpr int maxIter = 200;   // double potential iterations to counter this..?
+constexpr int maxIter = 1;
 
 class SparseMatrix
 {
@@ -489,24 +487,43 @@ double normDiff(double* a, double* b, int& n)
     return d;
 }
 
+void readPageRankValues(double* x, int n, string file)
+{
+    ifstream f;
+    f.open(file, std::ios_base::in);
+    if(!f.is_open())
+    {
+        cerr << "error opening pagerank values file" << endl;
+        exit(1);
+    }
+
+    int v;
+    for(int i = 0; i < n; ++i)
+        f >> v >> x[i]; 
+
+    f.close();
+}
+
 int main(int argc, char** argv)
 {
     cout << setprecision(16);
     cerr << setprecision(16);
 
-    if(argc < 4)
+    if(argc < 5)
     {
-        cerr << "usage: ./pagerank <type> <format> <input_file>" << endl;
+        cerr << "usage: ./pagerank <type> <format> <input_file> <output_file>" << endl;
         return 1;
     }
 
     string type = argv[1];
     string format = argv[2];
     string inputFile = argv[3];
+    string outputFile = argv[4];
 
     cout << "Type: " << type
     << "\nFormat: " << format 
     << "\nInput file: " << inputFile
+    << "\nOutput file: " << outputFile
     << endl;
 
     auto tmStart = chrono::high_resolution_clock::now();
@@ -573,10 +590,12 @@ int main(int argc, char** argv)
     for(int i = 0; i < n; ++i)
     {
         x[i] = v[i] = 1.0 / (double)(n);
-        y[i] = outdeg[i] = 0.0;
+        outdeg[i] = y[i] = 0.0;
     }
 
     matrix->calculateOutDegree(outdeg);
+
+    readPageRankValues(x, n, outputFile);
 
     auto tmInit = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
     cout << "Initialisation: " << tmInit << " seconds" << endl;
@@ -612,32 +631,14 @@ int main(int argc, char** argv)
     auto iterateT = chrono::duration_cast<chrono::nanoseconds>(endT - iterateS).count()*1e-9;
     auto totalT = chrono::duration_cast<chrono::nanoseconds>(endT - totalSt).count()*1e-9;
 
-    cout << "\nTotal time:" << totalT << " seconds\n"
-        << "Total iterate time:" << iterateT << " seconds\n"
-        << "Total seq time:" << (totalT - iterateT) << " seconds" << endl;
+    // cout << "\nTotal time:" << totalT << " seconds\n"
+    //     << "Total iterate time:" << iterateT << " seconds\n"
+    //     << "Total seq time:" << (totalT - iterateT) << " seconds" << endl;
 
     if(delta > tol)
         cerr << "error: solution has not converged" << endl;
-
-    // write to file
-    string outPath = "";
-    for(int i = inputFile.length()-1; i >= 0; --i)
-    {
-        char c = inputFile.at(i);
-        if(c == '/' || c == '\\')
-            break;
-        outPath += c;
-    }
-    reverse(outPath.begin(), outPath.end());
-
-    ofstream of;
-    of.open(("./results/std_" + outPath + ".prvals"));
-
-    of << setprecision(16);
-    for(int i = 0; i < n; ++i)
-        of << i << " " << x[i] << "\n";
-
-    of.close();
+    else
+        cerr << "success: solution has converged" << endl;
 
     return 0;
 }
