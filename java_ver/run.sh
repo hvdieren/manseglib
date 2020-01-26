@@ -1,5 +1,7 @@
 #!/bin/bash
 
+javac pagerank.java
+
 # COO
 # java -Xmx8g PageRank "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/smallGraph.coo"
 # java -Xmx8g PageRank COO "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/orkut_undir.coo"

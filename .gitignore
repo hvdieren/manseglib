@@ -4,6 +4,8 @@ results/
 
 # files
 *.o
+*.class
+
 main
 pagerank
 pagerank_check

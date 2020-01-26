@@ -19,16 +19,6 @@ constexpr double tol = 1e-7;
 constexpr int maxIter = 100;
 // constexpr int maxIter = 200;   // double potential iterations to counter this..?
 
-class SparseMatrix
-{
-public:
-    virtual void calculateOutDegree(int outdeg[]) = 0;
-    virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) = 0;
-
-    int numVertices;
-    int numEdges;
-};
-
 class SparseMatrixCOO : public SparseMatrix
 {
 public:
@@ -77,6 +67,8 @@ public:
 private:
     int* source;
     int* destination;
+    int numVertices;
+    int numEdges;
 };
 
 class SparseMatrixCSR : public SparseMatrix
@@ -145,6 +137,8 @@ public:
 private:
     int* index;
     int* dest;
+    int numVertices;
+    int numEdges;
 };
 
 class SparseMatrixCSC : public SparseMatrix
@@ -213,6 +207,8 @@ public:
 private:
     int* index;
     int* source;
+    int numVertices;
+    int numEdges;
 };
 
 /*
@@ -280,6 +276,8 @@ public:
 private:
     int* source;
     int* destination;
+    int numVertices;
+    int numEdges;
 };
 
 class SNAPSparseMatrixCSR : public SparseMatrix
@@ -360,6 +358,8 @@ public:
 private:
     int* index;
     int* dest;
+    int numVertices;
+    int numEdges;
 };
 
 class SNAPSparseMatrixCSC : public SparseMatrix
@@ -455,6 +455,8 @@ public:
 private:
     int* index;
     int* source;
+    int numVertices;
+    int numEdges;
 };
 
 double sum(double* a, int& n)
