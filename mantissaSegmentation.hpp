@@ -3,15 +3,15 @@
 namespace ManSeg
 {
     // internal representation of double, so it can be easily manipulated
-    typedef __UINT_FAST64_TYPE__ doublerep;
+    typedef std::uint64_t doublerep;
 
     /*
         Class representing the "head" segment of a double.
-        It is defined for ease of manipulating the values in an object of type TwoSegmentArray<false>.
+        It is defined for ease of manipulating the values in an object of type TwoSegArray<false>.
         It contains the sign bit, full 11 bit exponent, and 20 bits of mantissa, for a total
         of 32 bits.
         This gives less precision than IEEE-754 standard float.
-        It has a maximum precision of roughly 1e-6
+        It has a maximum precision of roughly 1e-5
     */
     class Head
     {
@@ -48,7 +48,7 @@ namespace ManSeg
 
     /*
         Class representing the "pair" of segments of a double.
-        It is defined for ease of manipulating the values in an object of type TwoSegmentArray<true>.
+        It is defined for ease of manipulating the values in an object of type TwoSegArray<true>.
         Each segment (which consists of a head and tail) is 32 bits.
         The head contains the sign bit, full 11 bit exponent, and 20 bits of mantissa, 
         for a total of 32 bits.
@@ -93,32 +93,35 @@ namespace ManSeg
     };
 
     /*
-        Empty templated class for performing operations on double values, conceptually split into
-        two 32 bit segments - "head" and "tail".
+        Array type class for performing operations on double values, conceptually split into two 32 bit segments - "head" and "tail".
+        false specialisation - Operations performed on values in the array only modify the "head" segment (i.e. the first 32 bits of a double value) unless specified otherwise.
+        true specialisation - Operations performed on values in the array are exactly the same as standard IEEE-754 doubles, but a bit slower due to combining of head and tail segments.
     */
     template<bool useTail>
-    class TwoSegmentArray; // we specialise this below.
+    class TwoSegArray; // we specialise this below.
 
     /*
-        Specialisation of TwoSegmentArray.
+        Specialisation of TwoSegArray.
         Operations performed on values in the array only modify the "head" segment
         (i.e. the first 32 bits of a double value) unless specified otherwise.
     */
     template<>
-    class TwoSegmentArray<false>
+    class TwoSegArray<false>
     {
     public:
-        TwoSegmentArray(size_t length)
+        TwoSegArray() {}
+
+        TwoSegArray(size_t length)
         {
             heads = new unsigned int[length];
             tails = new unsigned int[length];
         }
 
-        TwoSegmentArray(unsigned int* heads, unsigned int* tails)
+        TwoSegArray(unsigned int* heads, unsigned int* tails)
             :heads(heads), tails(tails)
         {}
 
-        ~TwoSegmentArray()
+        ~TwoSegArray()
         {
             heads = nullptr;
             tails = nullptr;
@@ -135,16 +138,17 @@ namespace ManSeg
 
         /*
             Increases the precision of the operations performed by returning an
-            object of type TwoSegmentArray<true> that has pointers to the values
+            object of type TwoSegArray<true> that has pointers to the values
             in the existing array.
         */
-        TwoSegmentArray<true> increasePrecision();
+        TwoSegArray<true> createFullPrecision();
 
+        void alloc(size_t length);
         /*
             Deletes the values of the dynamic arrays used to store values in
             the array.
             NOTE: this should only be called by one object with references to
-            the same set of values (such as object created using increasePrecision).
+            the same set of values (such as object created using createFullPrecision).
         */
         void del();
 
@@ -159,25 +163,26 @@ namespace ManSeg
     };
 
     /*
-        Specialisation of TwoSegmentArray.
-        Operations performed on values in the array are exactly the same as standard IEEE-754 doubles.
+        Specialisation of TwoSegArray.
+        Operations performed on values in the array are exactly the same as standard IEEE-754 doubles, but a bit slower due to combining of head and tail segments.
     */
     template<>
-    class TwoSegmentArray<true>
+    class TwoSegArray<true>
     {
     public:
-        TwoSegmentArray(size_t length)
+        TwoSegArray() {}
+
+        TwoSegArray(size_t length)
         {
-            len = length;
             heads = new unsigned int[length];
             tails = new unsigned int[length];
         }
 
-        TwoSegmentArray(unsigned int* heads, unsigned int* tails)
+        TwoSegArray(unsigned int* heads, unsigned int* tails)
             :heads(heads), tails(tails)
         {}
 
-        ~TwoSegmentArray()
+        ~TwoSegArray()
         {
             heads = nullptr;
             tails = nullptr;
@@ -189,26 +194,25 @@ namespace ManSeg
         void set(size_t id, T t);
         template<typename T>
         void setPair(size_t id, T t);
-
         double read(size_t id);
 
         /*
             Returns *this (as we do not have any precision increase to do)
         */
-        TwoSegmentArray<true> increasePrecision();
+        TwoSegArray<true> createFullPrecision();
 
+        void alloc(size_t length);
         /*
             Deletes the values of the dynamic arrays used to store values in
             the array.
             NOTE: this should only be called by one object with references to
-            the same set of values (such as object created using increasePrecision).
+            the same set of values (such as object created using createFullPrecision).
         */
         void del();
 
     private:
         unsigned int* heads;
         unsigned int* tails;
-        size_t len;
 
         static constexpr int segmentBits = 32;
         static constexpr unsigned int tailMask = ~0;
@@ -472,7 +476,7 @@ namespace ManSeg
 
 
     /**
-     * TwoSegmentArray functions
+     * TwoSegArray functions
     */
 
     /**
@@ -480,7 +484,7 @@ namespace ManSeg
      * (heads only)
     */
     template<typename T>
-    void TwoSegmentArray<false>::set(size_t id, T t)
+    void TwoSegArray<false>::set(size_t id, T t)
     {
         double d = t;
         const doublerep l = *reinterpret_cast<const doublerep*>(&d);
@@ -488,7 +492,7 @@ namespace ManSeg
     }
 
     template<typename T>
-    void TwoSegmentArray<false>::setPair(size_t id, T t)
+    void TwoSegArray<false>::setPair(size_t id, T t)
     {
         double d = t;
         const doublerep l = *reinterpret_cast<const doublerep*>(&d);
@@ -496,22 +500,28 @@ namespace ManSeg
         tails[id] = (l & tailMask);
     }
 
-    double TwoSegmentArray<false>::read(size_t id)
+    double TwoSegArray<false>::read(size_t id)
     {
         return static_cast<double>(Head(heads[id]));
     }
 
-    Head TwoSegmentArray<false>::operator[](size_t id)
+    Head TwoSegArray<false>::operator[](size_t id)
     {
         return Head(heads[id]);
     }
 
-    TwoSegmentArray<true> TwoSegmentArray<false>::increasePrecision()
+    TwoSegArray<true> TwoSegArray<false>::createFullPrecision()
     {
-        return TwoSegmentArray<true>(heads, tails);
+        return TwoSegArray<true>(heads, tails);
     }
 
-    void TwoSegmentArray<false>::del()
+    void TwoSegArray<false>::alloc(size_t length)
+    {
+        heads = new unsigned int[length];
+        tails = new unsigned int[length];
+    }
+
+    void TwoSegArray<false>::del()
     {
         if(heads) delete[] heads;
         if(tails) delete[] tails;
@@ -523,7 +533,7 @@ namespace ManSeg
      * (heads + tails)
     */
     template<typename T>
-    void TwoSegmentArray<true>::set(size_t id, T t)
+    void TwoSegArray<true>::set(size_t id, T t)
     {
         double d = t;
         const doublerep l = *reinterpret_cast<const doublerep*>(&d);
@@ -532,7 +542,7 @@ namespace ManSeg
     }
 
     template<typename T>
-    void TwoSegmentArray<true>::setPair(size_t id, T t)
+    void TwoSegArray<true>::setPair(size_t id, T t)
     {
         double d = t;
         const doublerep l = *reinterpret_cast<const doublerep*>(&d);
@@ -540,24 +550,43 @@ namespace ManSeg
         tails[id] = (l & tailMask);
     }
 
-    double TwoSegmentArray<true>::read(size_t id)
+    double TwoSegArray<true>::read(size_t id)
     {
         return static_cast<double>(Pair(heads[id], tails[id]));
     }
 
-    Pair TwoSegmentArray<true>::operator[](size_t id)
+    Pair TwoSegArray<true>::operator[](size_t id)
     {
         return Pair(heads[id], tails[id]);
     }
 
-    TwoSegmentArray<true> TwoSegmentArray<true>::increasePrecision()
+    TwoSegArray<true> TwoSegArray<true>::createFullPrecision()
     {
         return *this;
     }
 
-    void TwoSegmentArray<true>::del()
+    void TwoSegArray<true>::alloc(size_t length)
+    {
+        heads = new unsigned int[length];
+        tails = new unsigned int[length];
+    }
+
+    void TwoSegArray<true>::del()
     {
         if(heads) delete[] heads;
         if(tails) delete[] tails;
     }
+
+    class ManSegArray
+    {
+    public:
+        TwoSegArray<false> heads;
+        TwoSegArray<true> pairs;
+
+        ManSegArray(size_t length)
+        {
+            heads.alloc(length);
+            pairs = heads.createFullPrecision();
+        }
+    };
 }

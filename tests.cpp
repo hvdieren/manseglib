@@ -50,8 +50,8 @@ void printBinary(int l)
 }
 
 // helper function for test1
-template<class TwoSegmentArray>
-void f(TwoSegmentArray arr, TwoSegmentArray arr2, double* darr, double* darr2, size_t size)
+template<class TwoSegArray>
+void f(TwoSegArray arr, TwoSegArray arr2, double* darr, double* darr2, size_t size)
 {
     //     mseg sum    std double sum
     double msum = 0.0, dsum = 0.0;
@@ -74,12 +74,12 @@ void f(TwoSegmentArray arr, TwoSegmentArray arr2, double* darr, double* darr2, s
 // test that heads and pairs operate correctly
 void test1()
 {
-    // make calculations into templated function taking TwoSegmentArray as type parameter
+    // make calculations into templated function taking TwoSegArray as type parameter
     std::cout << std::fixed << std::setprecision(16);
     const size_t size = 10000000UL;
 
-    TwoSegmentArray<false> arr(size);
-    TwoSegmentArray<false> arr2(size);
+    TwoSegArray<false> arr(size);
+    TwoSegArray<false> arr2(size);
 
     double* darr = new double[size];
     double* darr2 = new double[size];
@@ -106,8 +106,8 @@ void test1()
     f(arr, arr2, darr, darr2, size);
 
     // setup whatever precisions you need/want
-    TwoSegmentArray<true> tarr = arr.increasePrecision();
-    TwoSegmentArray<true> tarr2 = arr2.increasePrecision();
+    TwoSegArray<true> tarr = arr.createFullPrecision();
+    TwoSegArray<true> tarr2 = arr2.createFullPrecision();
 
     for(size_t i = 0; i < size; ++i)
     {
@@ -135,9 +135,9 @@ void test2()
     // const size_t size = 10000000UL;
     const size_t size = 10UL;
 
-    TwoSegmentArray<true> arr(size);
-    TwoSegmentArray<true> arr2(size);
-    TwoSegmentArray<true> arr3(size);
+    TwoSegArray<true> arr(size);
+    TwoSegArray<true> arr2(size);
+    TwoSegArray<true> arr3(size);
     double d[10];
     double d2[10];
     double d3[10];
@@ -185,8 +185,8 @@ void test3()
 {
     std::cout << std::setprecision(16) << std::endl;
 
-    TwoSegmentArray<false> x(4);
-    TwoSegmentArray<true>y = x.increasePrecision();
+    TwoSegArray<false> x(4);
+    TwoSegArray<true>y = x.createFullPrecision();
 
     y[0] = 1.26;
     y.setPair(1, 1.26);
@@ -218,7 +218,7 @@ void test3()
 }
 
 // helper function for test4
-void fill(double* d, TwoSegmentArray<true>& y, int* v, const int& size)
+void fill(double* d, TwoSegArray<true>& y, int* v, const int& size)
 {
     for(int i = 0; i < size; ++i)
     {
@@ -234,8 +234,8 @@ constexpr double val = 0.85;
 // not exactly the same, but somewhat close.
 void test4(bool usePairs)
 {
-    TwoSegmentArray<false> x(size);                  // x = heads
-    TwoSegmentArray<true> y = x.increasePrecision();            // y = pairs
+    TwoSegArray<false> x(size);                  // x = heads
+    TwoSegArray<true> y = x.createFullPrecision();            // y = pairs
 
     int* v = new int[size];
     double* d = new double[size];
@@ -325,8 +325,8 @@ void test5()
 }
 
 // helper for test6 & test7
-template<class TwoSegmentArray>
-void t6Helper(TwoSegmentArray* ms, int size, int repeats)
+template<class TwoSegArray>
+void t6Helper(TwoSegArray* ms, int size, int repeats)
 {
     srand((unsigned int)(time(NULL)));
     for(int i = 0; i < repeats; ++i)
@@ -338,8 +338,8 @@ void t6Helper(TwoSegmentArray* ms, int size, int repeats)
         }
     }
 }
-template<class TwoSegmentArray>
-void t6Helper_v2(TwoSegmentArray* ms, int size, int repeats)
+template<class TwoSegArray>
+void t6Helper_v2(TwoSegArray* ms, int size, int repeats)
 {
     srand((unsigned int)(time(NULL)));
     for(int i = 0; i < repeats; ++i)
@@ -368,8 +368,8 @@ void test6()
 {
     const int size = 1000000;
     const int repetitions = 1000;
-    TwoSegmentArray<false>* f = new TwoSegmentArray<false>(size);
-    TwoSegmentArray<true>* t = new TwoSegmentArray<true>(size);
+    TwoSegArray<false>* f = new TwoSegArray<false>(size);
+    TwoSegArray<true>* t = new TwoSegArray<true>(size);
     double* d = new double[size];
 
     auto d_start = std::chrono::_V2::high_resolution_clock::now();
@@ -406,8 +406,8 @@ void test6()
     delete[] d, f, t;
 }
 // benchmark reading
-template<class TwoSegmentArray>
-double t7Helper(TwoSegmentArray* ms, int size, int repetitions)
+template<class TwoSegArray>
+double t7Helper(TwoSegArray* ms, int size, int repetitions)
 {
     double t = 0.0;
     for(int i = 0; i < repetitions; ++i)
@@ -419,8 +419,8 @@ double t7Helper(TwoSegmentArray* ms, int size, int repetitions)
     }
     return t;
 }
-template<class TwoSegmentArray>
-double t7Helper_v2(TwoSegmentArray* ms, int size, int repetitions)
+template<class TwoSegArray>
+double t7Helper_v2(TwoSegArray* ms, int size, int repetitions)
 {
     double t = 0.0;
     for(int i = 0; i < repetitions; ++i)
@@ -448,8 +448,8 @@ void test7()
 {
     const int size = 1000000;
     const int repetitions = 1000;
-    TwoSegmentArray<false>* f = new TwoSegmentArray<false>(size);
-    TwoSegmentArray<true>* t = new TwoSegmentArray<true>(size);
+    TwoSegArray<false>* f = new TwoSegArray<false>(size);
+    TwoSegArray<true>* t = new TwoSegArray<true>(size);
     double* d = new double[size];
 
 
@@ -564,9 +564,9 @@ int main(int argc, char** argv)
 }
 
 // TODO:
-// Can probably rename TwoSegmentArray to TwoSegmentArray since there is no encapsuling thing anymore
+// Can probably rename TwoSegArray to TwoSegArray since there is no encapsuling thing anymore
 // unless you want the wrapper thing you'd talked about which holds refs to low and high precision or whatever
 // but that might not be so good if multiple precisions in future or whatever
 
-// I think this still applies, but with pointer version of TwoSegmentArray
-// dynamic version of TwoSegmentArray still doesn't like [] operator (need to wrap in *() to use)
+// I think this still applies, but with pointer version of TwoSegArray
+// dynamic version of TwoSegArray still doesn't like [] operator (need to wrap in *() to use)

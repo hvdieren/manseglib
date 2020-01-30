@@ -7,6 +7,7 @@
 #include <regex>
 
 #include "mantissaSegmentation.hpp"
+#include "quicksort.h"
 
 using namespace std;
 using namespace ManSeg;
@@ -17,35 +18,16 @@ constexpr double tol = 1e-7;
 constexpr int maxIter = 100;
 // constexpr int maxIter = 200;
 
-// double* npr, *opr, *cnt;
+enum MatrixType {COO, CSR, CSC, SNAP_COO, SNAP_CSR, SNAP_CSC};
 
-// SNAP csc use:
-// convert into coo
-// then sort on dest
-// then convert to csc
-// initialisation will be slow, but should be O(n log n)
+template<int matrixType>
+class SparseMatrix;
 
-// todo: convert this from virtual nonsense to standalone objects/classes
-// there isn't really any need for there to be inhertiance here,
-// considering SparseMatrix is an abstract.
-// just convert func pr() to be template
-// and instead of SparseMatrix* use T*
-// provided T has the functions it can be used..
-class SparseMatrix
+template<>
+class SparseMatrix<COO>
 {
 public:
-    virtual void calculateOutDegree(int outdeg[]) = 0;
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) = 0;
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) = 0;
-
-    int numVertices;
-    int numEdges;
-};
-
-class SparseMatrixCOO : public SparseMatrix
-{
-public:
-    SparseMatrixCOO(string file)
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -65,36 +47,51 @@ public:
 
         for(int i = 0; i < numEdges; ++i)
             f >> source[i] >> destination[i];
+
+        f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numEdges; ++i)
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
+    template<class TwoSegArray>
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
     {
+        int src, dest;
         for(int i = 0; i < numEdges; ++i)
-            newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
+        {
+            src = source[i];
+            dest = destination[i];
+            newPr[dest] += d*(prevPr[src]/outdeg[src]);
+        }
     }
 
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
-    {
-        for(int i = 0; i < numEdges; ++i)
-            newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
-    }
+    // void iterate(double d, TwoSegArray<true>& prevPr, TwoSegArray<true>& newPr, int outdeg[], double contr[])
+    // {
+    //     int src, dest;
+    //     for(int i = 0; i < numEdges; ++i)
+    //     {
+    //         src = source[i];
+    //         dest = destination[i];
+    //         newPr[dest] += d*(prevPr[src]/outdeg[src]);
+    //     }
+    // }
 
-
+    int numVertices;
+    int numEdges;
 private:
     int* source;
     int* destination;
 };
 
-class SparseMatrixCSR : public SparseMatrix
+template<>
+class SparseMatrix<CSR>
 {
 public:
-    SparseMatrixCSR(string file)
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -129,47 +126,44 @@ public:
             for(int j = 1; j < results.size(); ++j)
                 dest[index[i] + (j - 1)] = stoi(results[j]);
         }
+
+        f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numVertices; ++i)
             outdeg[i] = (index[i + 1] - index[i]);
     }
 
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
+    template<class TwoSegArray>
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
 
+        int curr, next;
         for(int i = 0; i < numVertices; ++i)
         {
-            for(int j = index[i]; j < index[i + 1]; ++j)
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
                 newPr[dest[j]] += contr[i];
         }
     }
 
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
-    {
-        for(int i = 0; i < numVertices; ++i)
-            contr[i] = d*(prevPr[i]/outdeg[i]);
-
-        for(int i = 0; i < numVertices; ++i)
-        {
-            for(int j = index[i]; j < index[i + 1]; ++j)
-                newPr[dest[j]] += contr[i];
-        }
-    }
-
+    int numVertices;
+    int numEdges;
 private:
     int* index;
     int* dest;
 };
 
-class SparseMatrixCSC : public SparseMatrix
+template<>
+class SparseMatrix<CSC>
 {
-public: 
-    SparseMatrixCSC(string file)
+public:
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -204,71 +198,49 @@ public:
             for(int j = 1; j < results.size(); ++j)
                 source[index[i] + (j - 1)] = stoi(results[j]);
         }
+
+        f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numEdges; ++i)
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
+    template<class TwoSegArray>
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
 
+        int curr, next;
         for(int i = 0; i < numVertices; ++i)
         {
-            for(int j = index[i]; j < index[i + 1]; ++j)
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
                 newPr[i] += contr[source[j]];
         }
-        // prevPr.toNewDoubleArray(opr);
-        // newPr.toNewDoubleArray(npr);
-
-        // for(int i = 0; i < numVertices; ++i)
-        //     cnt[i] = d*(opr[i]/outdeg[i]);
-
-        // for(int i = 0; i < numVertices; ++i)
-        //     for(int j = index[i]; j < index[i + 1]; ++j)
-        //         npr[i] += cnt[source[j]];
-
-        // newPr = npr;
     }
 
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
-    {
-        for(int i = 0; i < numVertices; ++i)
-            contr[i] = d*(prevPr[i]/outdeg[i]);
-
-        for(int i = 0; i < numVertices; ++i)
-        {
-            for(int j = index[i]; j < index[i + 1]; ++j)
-                newPr[i] += contr[source[j]];
-        }
-        // prevPr.toNewDoubleArray(opr);
-        // newPr.toNewDoubleArray(npr);
-
-        // for(int i = 0; i < numVertices; ++i)
-        //     cnt[i] = d*(opr[i]/outdeg[i]);
-
-        // for(int i = 0; i < numVertices; ++i)
-        //     for(int j = index[i]; j < index[i + 1]; ++j)
-        //         npr[i] += cnt[source[j]];
-
-        // newPr = npr;
-    }
-
+    int numVertices;
+    int numEdges;
 private:
     int* index;
     int* source;
 };
 
-
-// SNAP reading version of things
-class SNAPSparseMatrixCOO : public SparseMatrix
+/*
+    **********************************************************
+                    SNAP input file format
+    **********************************************************
+*/
+template<>
+class SparseMatrix<SNAP_COO>
 {
 public:
-    SNAPSparseMatrixCOO(string file)
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -282,7 +254,7 @@ public:
         getline(f, skipLine); // skip first line
 
         f >> nodes >> edges;
-        getline(f, skipLine);
+        getline(f, skipLine); // skip next descriptor
 
         string n = regex_replace(nodes, regex("[^0-9]*([0-9]+).*"), "$1");
         numVertices = atoi(n.c_str());
@@ -296,36 +268,225 @@ public:
         source = new int[numEdges];
         destination = new int[numEdges];
 
+        getline(f, skipLine); // skip next descriptor
+
         for(int i = 0; i < numEdges; ++i)
             f >> source[i] >> destination[i];
+
+        f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numEdges; ++i)
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
+    template<class TwoSegArray>
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
     {
+        int src, dest;
         for(int i = 0; i < numEdges; ++i)
-            newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[destination[i]]);
+        {
+            src = source[i];
+            dest = destination[i];
+            newPr[dest] += d*(prevPr[src]/outdeg[src]);
+        }
     }
 
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
-    {
-        for(int i = 0; i < numEdges; ++i)
-            newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[destination[i]]);
-    }
-
-
+    int numVertices;
+    int numEdges;
 private:
     int* source;
     int* destination;
 };
 
-template<class TwoSegmentArray>
-double sum(TwoSegmentArray& a, int& n)
+template<>
+class SparseMatrix<SNAP_CSR>
+{
+public:
+    SparseMatrix(string file)
+    {
+        ifstream f;
+        f.open(file, std::ios_base::in);
+        if(!f.is_open())
+        {
+            cerr << "error opening file in CSR" << endl;
+            exit(1);
+        }
+
+       string line, nodes, edges;
+        getline(f, line); // skip first line
+
+        f >> nodes >> edges;
+        getline(f, line); 
+
+        string n = regex_replace(nodes, regex("[^0-9]*([0-9]+).*"), "$1");
+        numVertices = atoi(n.c_str());
+        
+        n = regex_replace(edges, regex("[^0-9]*([0-9]+).*"), "$1");
+        numEdges = atoi(n.c_str());
+
+        cout << "numVertices=" << numVertices << "\n";
+        cout << "numEdges=" << numEdges << "\n";
+
+        index = new int[numVertices + 1];
+        dest = new int[numEdges];
+
+        index[0] = 0; // first index
+
+        int indexPos = 0;
+        int edgeCounter = 0;
+        int s; // hold source for comparison
+
+        getline(f, line); // skip next descriptor
+        for(int i = 0; i < numEdges; ++i)
+        {
+            f >> s >> dest[i];
+
+            while(indexPos < s)
+                index[++indexPos] = (edgeCounter);
+
+            ++edgeCounter;
+        }
+
+        while(indexPos < (numVertices + 1))
+            index[++indexPos] = numEdges;
+
+        f.close();
+    }
+
+    void calculateOutDegree(int outdeg[])
+    {
+        for(int i = 0; i < numVertices; ++i)
+            outdeg[i] = (index[i + 1] - index[i]);
+    }
+
+    template<class TwoSegArray>
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
+    {
+        for(int i = 0; i < numVertices; ++i)
+            contr[i] = d*(prevPr[i]/outdeg[i]);
+
+        int curr, next;
+        for(int i = 0; i < numVertices; ++i)
+        {
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
+                newPr[dest[j]] += contr[i];
+        }
+    }
+
+    int numVertices;
+    int numEdges;
+private:
+    int* index;
+    int* dest;
+};
+
+template<>
+class SparseMatrix<SNAP_CSC>
+{
+public:
+    SparseMatrix(string file)
+    {
+        ifstream f;
+        f.open(file, std::ios_base::in);
+        if(!f.is_open())
+        {
+            cerr << "error opening file in CSR" << endl;
+            exit(1);
+        }
+
+       string line, nodes, edges;
+        getline(f, line); // skip first line
+
+        f >> nodes >> edges;
+        getline(f, line);
+
+        string n = regex_replace(nodes, regex("[^0-9]*([0-9]+).*"), "$1");
+        numVertices = atoi(n.c_str());
+        
+        n = regex_replace(edges, regex("[^0-9]*([0-9]+).*"), "$1");
+        numEdges = atoi(n.c_str());
+
+        cout << "numVertices=" << numVertices << "\n";
+        cout << "numEdges=" << numEdges << "\n";
+
+        index = new int[numVertices + 1];
+        // source = new int[numEdges];
+
+        getline(f, line);  // skip next line
+
+        // read in edges as COO
+        int* src = new int[numEdges];
+        int* dst = new int[numEdges];
+
+        for(int i = 0; i < numEdges; ++i)
+            f >> src[i] >> dst[i];
+
+        // perform sort on dst, so we can create a CSC representation
+        quicksort_pair(src, dst, 0, (numEdges-1));
+
+        index[0] = 0; // first index
+        int indexPos = 0;
+        int edgeCounter = 0;
+        for(int i = 0; i < numEdges; ++i)
+        {
+            while(indexPos < dst[i])
+                index[++indexPos] = (edgeCounter);
+            ++edgeCounter;
+        }
+
+        while(indexPos < (numVertices + 1))
+            index[++indexPos] = numEdges;
+
+        source = src;
+
+        // not super pretty but we need this for the same ordering as
+        // you would get with CSR/COO, otherwise deltas/pagerank values
+        // end up being off due to error
+        for(int i = 0; i < (numVertices); ++i)
+            quicksort(source, index[i], index[i+1]-1);
+
+        f.close();
+
+        delete[] dst;
+    }
+
+    void calculateOutDegree(int outdeg[])
+    {
+        for(int i = 0; i < numEdges; ++i)
+            ++outdeg[source[i]];
+    }
+
+    template<class TwoSegArray>
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
+    {
+        for(int i = 0; i < numVertices; ++i)
+            contr[i] = d*(prevPr[i]/outdeg[i]);
+
+        int curr, next;
+        for(int i = 0; i < numVertices; ++i)
+        {
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
+                newPr[i] += contr[source[j]];
+        }
+    }
+
+    int numVertices;
+    int numEdges;
+
+private:
+    int* index;
+    int* source;
+};
+
+template<class TwoSegArray>
+double sum(TwoSegArray& a, int& n)
 {
     double d = 0.0;
     double err = 0.0;
@@ -341,8 +502,8 @@ double sum(TwoSegmentArray& a, int& n)
     return d;
 }
 
-template<class TwoSegmentArray>
-double normDiff(TwoSegmentArray& a, TwoSegmentArray& b, int& n)
+template<class TwoSegArray>
+double normDiff(TwoSegArray& a, TwoSegArray& b, int& n)
 {
     double d = 0.0;
     double err = 0.0;
@@ -358,7 +519,8 @@ double normDiff(TwoSegmentArray& a, TwoSegmentArray& b, int& n)
     return d;
 }
 
-void pr(SparseMatrix* matrix, string inputFile, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::nanoseconds>& tmStart)
+template<class SparseMatrix>
+void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::nanoseconds>& tmStart, string& inputFile)
 {
     auto totalSt = tmStart;
     auto tmInput = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
@@ -366,19 +528,15 @@ void pr(SparseMatrix* matrix, string inputFile, std::chrono::time_point<std::chr
     tmStart = chrono::high_resolution_clock::now();
 
     int n = matrix->numVertices;
-    TwoSegmentArray<false>x_f(n); // pagerank
-    TwoSegmentArray<true>x_t = x_f.increasePrecision();     // <--- should *more or less* equivalent to just creating true then assigning things
-    TwoSegmentArray<false>v_f(n);                //      i.e. this should work fine and if it doesn't there's something wrong
-    TwoSegmentArray<true>v_t = v_f.increasePrecision();
-    TwoSegmentArray<false>y_f(n); // new pagerank
-    TwoSegmentArray<true>y_t = y_f.increasePrecision();
+    TwoSegArray<false>x_f(n); // pagerank
+    TwoSegArray<true>x_t = x_f.createFullPrecision();     // <--- should *more or less* equivalent to just creating true then assigning things
+    TwoSegArray<false>v_f(n);                //      i.e. this should work fine and if it doesn't there's something wrong
+    TwoSegArray<true>v_t = v_f.createFullPrecision();
+    TwoSegArray<false>y_f(n); // new pagerank
+    TwoSegArray<true>y_t = y_f.createFullPrecision();
     int* outdeg = new int[n];
-    TwoSegmentArray<false>contr_f(n); // contribution for each vertex
-    TwoSegmentArray<true>contr_t = contr_f.increasePrecision();
-
-    // npr = new double[n];
-    // opr = new double[n];
-    // cnt = new double[n];
+    TwoSegArray<false>contr_f(n); // contribution for each vertex
+    TwoSegArray<true>contr_t = contr_f.createFullPrecision();
 
     double delta = 2.0;
     int iter = 0;
@@ -400,62 +558,107 @@ void pr(SparseMatrix* matrix, string inputFile, std::chrono::time_point<std::chr
     
     
     // set this to true to only use full precision
-    bool changePrecision = false;
-    
-    
-    while(iter < maxIter && delta > tol)
-    {
-        if(!changePrecision)
-        {
-            matrix->iterate(d, x_f, y_f, outdeg, contr_f);
+    // bool changePrecision = false;
+    // while(iter < maxIter && delta > tol)
+    // {
+    //     if(!changePrecision)
+    //     {
+    //         matrix->iterate(d, x_f, y_f, outdeg, contr_f);
 
-            double w = (1.0 - sum(y_f, n));
-            for(int i = 0; i < n; ++i)
-                y_f[i] += w * v_f[i];
+    //         double w = (1.0 - sum(y_f, n));
+    //         for(int i = 0; i < n; ++i)
+    //             y_f[i] += w * v_f[i];
 
-            delta = normDiff(x_f, y_f, n);
-            ++iter;
+    //         delta = normDiff(x_f, y_f, n);
+    //         ++iter;
             
-            if(delta <= 1e-5) 
-            {
-                changePrecision = true; // i think this is the limit of precision heads only can do
-                cout << "==========\nincreased precision\n==========\n";
-            }
+    //         if(delta <= 1e-5) 
+    //         {
+    //             changePrecision = true; // i think this is the limit of precision heads only can do
+    //             cout << "==========\nincreased precision\n==========\n";
+    //         }
 
-            for(int i = 0; i < n; ++i)
-            {
-                x_f[i] = y_f[i];
-                y_f[i] = 0.0;
-            }
+    //         for(int i = 0; i < n; ++i)
+    //         {
+    //             x_f[i] = y_f[i];
+    //             y_f[i] = 0.0;
+    //         }
 
-            auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
-            cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_f, n) 
-                << " time=" << tmStep << " seconds" << endl;
-        }
-        else
+    //         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
+    //         cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_f, n) 
+    //             << " time=" << tmStep << " seconds" << endl;
+    //     }
+    //     else
+    //     {
+    //         matrix->iterate(d, x_t, y_t, outdeg, contr_t);
+
+    //         double w = (1.0 - sum(y_t, n));
+    //         for(int i = 0; i < n; ++i)
+    //             y_t[i] += w * v_t[i];
+
+    //         delta = normDiff(x_t, y_t, n);
+    //         ++iter;
+
+    //         for(int i = 0; i < n; ++i)
+    //         {
+    //             x_t[i] = y_t[i];
+    //             y_t[i] = 0.0;
+    //         }
+
+    //         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
+    //         cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_t, n) 
+    //             << " time=" << tmStep << " seconds" << endl;
+    //     }
+
+    //     tmStart = chrono::high_resolution_clock::now();
+    // }
+    while(iter < maxIter && delta > 1e-5) // use heads only
+    {
+        matrix->iterate(d, x_f, y_f, outdeg, contr_f);
+
+        double w = (1.0 - sum(y_f, n));
+        for(int i = 0; i < n; ++i)
+            y_f[i] += w * v_f[i];
+
+        delta = normDiff(x_f, y_f, n);
+        ++iter;
+        
+        for(int i = 0; i < n; ++i)
         {
-            matrix->iterate(d, x_t, y_t, outdeg, contr_t);
-
-            double w = (1.0 - sum(y_t, n));
-            for(int i = 0; i < n; ++i)
-                y_t[i] += w * v_t[i];
-
-            delta = normDiff(x_t, y_t, n);
-            ++iter;
-
-            for(int i = 0; i < n; ++i)
-            {
-                x_t[i] = y_t[i];
-                y_t[i] = 0.0;
-            }
-
-            auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
-            cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_t, n) 
-                << " time=" << tmStep << " seconds" << endl;
+            x_f[i] = y_f[i];
+            y_f[i] = 0.0;
         }
 
+        auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
+        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_f, n) 
+            << " time=" << tmStep << " seconds" << endl;
+        
         tmStart = chrono::high_resolution_clock::now();
     }
+    cout << "\n=========================\nIncreased Precision\n=========================" << endl;
+    while(iter < maxIter && delta > tol) // use full precision
+    {
+        matrix->iterate(d, x_t, y_t, outdeg, contr_t);
+
+        double w = (1.0 - sum(y_t, n));
+        for(int i = 0; i < n; ++i)
+            y_t[i] += w * v_t[i];
+
+        delta = normDiff(x_t, y_t, n);
+        ++iter;
+
+        for(int i = 0; i < n; ++i)
+        {
+            x_t[i] = y_t[i];
+            y_t[i] = 0.0;
+        }
+ 
+        auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
+        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_t, n) 
+            << " time=" << tmStep << " seconds" << endl;
+        tmStart = chrono::high_resolution_clock::now();
+    }
+
     auto endT = chrono::high_resolution_clock::now();
 
     auto iterateT = chrono::duration_cast<chrono::nanoseconds>(endT - iterateS).count()*1e-9;
@@ -473,8 +676,7 @@ void pr(SparseMatrix* matrix, string inputFile, std::chrono::time_point<std::chr
     for(int i = inputFile.length()-1; i >= 0; --i)
     {
         char c = inputFile.at(i);
-        if(c == '/' || c == '\\')
-            break;
+        if(c == '/' || c == '\\') break;
         outPath += c;
     }
     reverse(outPath.begin(), outPath.end());
@@ -516,23 +718,29 @@ int main(int argc, char** argv)
 
     auto tmStart = chrono::high_resolution_clock::now();
 
-    SparseMatrix* matrix;
-    if(type.compare("SNAP") == 0)
+    SparseMatrix<COO>* coo;
+    SparseMatrix<CSR>* csr;
+    SparseMatrix<CSC>* csc;
+    SparseMatrix<SNAP_COO>* snap_coo;
+    SparseMatrix<SNAP_CSR>* snap_csr;
+    SparseMatrix<SNAP_CSC>* snap_csc;
+    if(type.compare("SNAP") == 0) // type is SNAP
     {
+        cout << "executing SNAP method.." << endl;
         if(format.compare("CSR") == 0)
         {
-            // matrix = new SNAPSparseMatrixCSR(inputFile);
-            // pr(matrix, inputFile, tmStart);
+            snap_csr = new SparseMatrix<SNAP_CSR>(inputFile);
+            pr(snap_csr, tmStart, inputFile);
         }
         else if(format.compare("CSC") == 0)
         {
-            // matrix = new SNAPSparseMatrixCSC(inputFile);
-            // pr(matrix, inputFile, tmStart);
+            snap_csc = new SparseMatrix<SNAP_CSC>(inputFile);
+            pr(snap_csc, tmStart, inputFile);
         }
         else if(format.compare("COO") == 0)
         {
-            matrix = new SNAPSparseMatrixCOO(inputFile);
-            pr(matrix, inputFile, tmStart);
+            snap_coo = new SparseMatrix<SNAP_COO>(inputFile);
+            pr(snap_coo, tmStart, inputFile);
         }
         else
         {
@@ -542,21 +750,21 @@ int main(int argc, char** argv)
     }
     else
     {
-        cout << "using default method...\n";
+        cout << "executing default method.." << endl;
         if(format.compare("CSR") == 0)
         {
-            matrix = new SparseMatrixCSR(inputFile);
-            pr(matrix, inputFile, tmStart);
+            csr = new SparseMatrix<CSR>(inputFile);
+            pr(csr, tmStart, inputFile);
         }
         else if(format.compare("CSC") == 0)
         {
-            matrix = new SparseMatrixCSC(inputFile);
-            pr(matrix, inputFile, tmStart);
+            csc = new SparseMatrix<CSC>(inputFile);
+            pr(csc, tmStart, inputFile);
         }
         else if(format.compare("COO") == 0)
         {
-            matrix = new SparseMatrixCOO(inputFile);
-            pr(matrix, inputFile, tmStart);
+            coo = new SparseMatrix<COO>(inputFile);
+            pr(coo, tmStart, inputFile);
         }
         else
         {
@@ -564,7 +772,6 @@ int main(int argc, char** argv)
             return 1;
         }
     }
-    
     
 
     return 0;

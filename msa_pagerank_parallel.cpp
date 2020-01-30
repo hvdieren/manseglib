@@ -35,8 +35,8 @@ class SparseMatrix
 {
 public:
     virtual void calculateOutDegree(int outdeg[]) = 0;
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) = 0;
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) = 0;
+    virtual void iterate(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], TwoSegArray<false>& contr) = 0;
+    virtual void iterate(double d, TwoSegArray<true>& prevPr, TwoSegArray<true>& newPr, int outdeg[], TwoSegArray<true>& contr) = 0;
 
     int numVertices;
     int numEdges;
@@ -73,7 +73,7 @@ public:
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
+    virtual void iterate(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], TwoSegArray<false>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
@@ -87,7 +87,7 @@ public:
         // newPr = npr;
     }
 
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
+    virtual void iterate(double d, TwoSegArray<true>& prevPr, TwoSegArray<true>& newPr, int outdeg[], TwoSegArray<true>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[source[i]]);
@@ -153,7 +153,7 @@ public:
             outdeg[i] = (index[i + 1] - index[i]);
     }
 
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
+    virtual void iterate(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], TwoSegArray<false>& contr) override
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -177,7 +177,7 @@ public:
         // newPr = npr;
     }
 
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
+    virtual void iterate(double d, TwoSegArray<true>& prevPr, TwoSegArray<true>& newPr, int outdeg[], TwoSegArray<true>& contr) override
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -252,7 +252,7 @@ public:
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
+    virtual void iterate(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], TwoSegArray<false>& contr) override
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -275,7 +275,7 @@ public:
         // newPr = npr;
     }
 
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
+    virtual void iterate(double d, TwoSegArray<true>& prevPr, TwoSegArray<true>& newPr, int outdeg[], TwoSegArray<true>& contr) override
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -346,13 +346,13 @@ public:
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, TwoSegmentArray<false>& prevPr, TwoSegmentArray<false>& newPr, int outdeg[], TwoSegmentArray<false>& contr) override
+    virtual void iterate(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], TwoSegArray<false>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[destination[i]]);
     }
 
-    virtual void iterate(double d, TwoSegmentArray<true>& prevPr, TwoSegmentArray<true>& newPr, int outdeg[], TwoSegmentArray<true>& contr) override
+    virtual void iterate(double d, TwoSegArray<true>& prevPr, TwoSegArray<true>& newPr, int outdeg[], TwoSegArray<true>& contr) override
     {
         for(int i = 0; i < numEdges; ++i)
             newPr[destination[i]] += d*(prevPr[source[i]]/outdeg[destination[i]]);
@@ -364,8 +364,8 @@ private:
     int* destination;
 };
 
-template<class TwoSegmentArray>
-double sum(TwoSegmentArray& a, int& n)
+template<class TwoSegArray>
+double sum(TwoSegArray& a, int& n)
 {
     double d = 0.0;
     double err = 0.0;
@@ -381,8 +381,8 @@ double sum(TwoSegmentArray& a, int& n)
     return d;
 }
 
-template<class TwoSegmentArray>
-double normDiff(TwoSegmentArray& a, TwoSegmentArray& b, int& n)
+template<class TwoSegArray>
+double normDiff(TwoSegArray& a, TwoSegArray& b, int& n)
 {
     double d = 0.0;
     double err = 0.0;
@@ -406,15 +406,15 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     tmStart = chrono::high_resolution_clock::now();
 
     int n = matrix->numVertices;
-    TwoSegmentArray<false>x_f(n); // pagerank
-    TwoSegmentArray<true>x_t = x_f.increasePrecision();     // <--- should *more or less* equivalent to just creating true then assigning things
-    TwoSegmentArray<false>v_f(n);                //      i.e. this should work fine and if it doesn't there's something wrong
-    TwoSegmentArray<true>v_t = v_f.increasePrecision();
-    TwoSegmentArray<false>y_f(n); // new pagerank
-    TwoSegmentArray<true>y_t = y_f.increasePrecision();
+    TwoSegArray<false>x_f(n); // pagerank
+    TwoSegArray<true>x_t = x_f.createFullPrecision();     // <--- should *more or less* equivalent to just creating true then assigning things
+    TwoSegArray<false>v_f(n);                //      i.e. this should work fine and if it doesn't there's something wrong
+    TwoSegArray<true>v_t = v_f.createFullPrecision();
+    TwoSegArray<false>y_f(n); // new pagerank
+    TwoSegArray<true>y_t = y_f.createFullPrecision();
     int* outdeg = new int[n];
-    TwoSegmentArray<false>contr_f(n); // contribution for each vertex
-    TwoSegmentArray<true>contr_t = contr_f.increasePrecision();
+    TwoSegArray<false>contr_f(n); // contribution for each vertex
+    TwoSegArray<true>contr_t = contr_f.createFullPrecision();
 
     // npr = new double[n];
     // opr = new double[n];

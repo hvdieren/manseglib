@@ -19,10 +19,21 @@ constexpr double tol = 1e-7;
 constexpr int maxIter = 100;
 // constexpr int maxIter = 200;   // double potential iterations to counter this..?
 
-class SparseMatrixCOO : public SparseMatrix
+enum MatrixType {COO, CSR, CSC, SNAP_COO, SNAP_CSR, SNAP_CSC};
+
+template<int matrixType>
+class SparseMatrix
 {
 public:
-    SparseMatrixCOO(string file)
+    int numVertices;
+    int numEdges;
+};
+
+template<>
+class SparseMatrix<COO>
+{
+public:
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -46,13 +57,13 @@ public:
         f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numEdges; ++i)
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
+    void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[])
     {
         int src, dest;
         for(int i = 0; i < numEdges; ++i)
@@ -63,18 +74,18 @@ public:
         }
     }
 
-
+    int numVertices;
+    int numEdges;
 private:
     int* source;
     int* destination;
-    int numVertices;
-    int numEdges;
 };
 
-class SparseMatrixCSR : public SparseMatrix
+template<>
+class SparseMatrix<CSR>
 {
 public:
-    SparseMatrixCSR(string file)
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -113,13 +124,13 @@ public:
         f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numVertices; ++i)
             outdeg[i] = (index[i + 1] - index[i]);
     }
 
-    virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
+    void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[])
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -134,17 +145,18 @@ public:
         }
     }
 
+    int numVertices;
+    int numEdges;
 private:
     int* index;
     int* dest;
-    int numVertices;
-    int numEdges;
 };
 
-class SparseMatrixCSC : public SparseMatrix
+template<>
+class SparseMatrix<CSC>
 {
 public:
-    SparseMatrixCSC(string file)
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -183,13 +195,13 @@ public:
         f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numEdges; ++i)
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
+    void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[])
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -204,11 +216,11 @@ public:
         }
     }
 
+    int numVertices;
+    int numEdges;
 private:
     int* index;
     int* source;
-    int numVertices;
-    int numEdges;
 };
 
 /*
@@ -216,10 +228,11 @@ private:
                     SNAP input file format
     **********************************************************
 */
-class SNAPSparseMatrixCOO : public SparseMatrix
+template<>
+class SparseMatrix<SNAP_COO>
 {
 public:
-    SNAPSparseMatrixCOO(string file)
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -255,13 +268,13 @@ public:
         f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numEdges; ++i)
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
+    void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[])
     {
         int src, dest;
         for(int i = 0; i < numEdges; ++i)
@@ -272,18 +285,18 @@ public:
         }
     }
 
-
+    int numVertices;
+    int numEdges;
 private:
     int* source;
     int* destination;
-    int numVertices;
-    int numEdges;
 };
 
-class SNAPSparseMatrixCSR : public SparseMatrix
+template<>
+class SparseMatrix<SNAP_CSR>
 {
 public:
-    SNAPSparseMatrixCSR(string file)
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -334,13 +347,13 @@ public:
         f.close();
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numVertices; ++i)
             outdeg[i] = (index[i + 1] - index[i]);
     }
 
-    virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
+    void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[])
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -355,17 +368,18 @@ public:
         }
     }
 
+    int numVertices;
+    int numEdges;
 private:
     int* index;
     int* dest;
-    int numVertices;
-    int numEdges;
 };
 
-class SNAPSparseMatrixCSC : public SparseMatrix
+template<>
+class SparseMatrix<SNAP_CSC>
 {
 public:
-    SNAPSparseMatrixCSC(string file)
+    SparseMatrix(string file)
     {
         ifstream f;
         f.open(file, std::ios_base::in);
@@ -431,13 +445,13 @@ public:
         delete[] dst;
     }
 
-    virtual void calculateOutDegree(int outdeg[]) override
+    void calculateOutDegree(int outdeg[])
     {
         for(int i = 0; i < numEdges; ++i)
             ++outdeg[source[i]];
     }
 
-    virtual void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[]) override
+    void iterate(double d, double prevPr[], double newPr[], int outdeg[], double contr[])
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -452,11 +466,12 @@ public:
         }
     }
 
+    int numVertices;
+    int numEdges;
+
 private:
     int* index;
     int* source;
-    int numVertices;
-    int numEdges;
 };
 
 double sum(double* a, int& n)
@@ -491,73 +506,10 @@ double normDiff(double* a, double* b, int& n)
     return d;
 }
 
-int main(int argc, char** argv)
+template<class SparseMatrix>
+void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::nanoseconds>& tmStart, string& inputFile)
 {
-    cout << setprecision(16);
-    cerr << setprecision(16);
-
-    if(argc < 4)
-    {
-        cerr << "usage: ./pagerank <type> <format> <input_file>" << endl;
-        return 1;
-    }
-
-    string type = argv[1];
-    string format = argv[2];
-    string inputFile = argv[3];
-
-    cout << "Type: " << type
-    << "\nFormat: " << format 
-    << "\nInput file: " << inputFile
-    << endl;
-
-    auto tmStart = chrono::high_resolution_clock::now();
     auto totalSt = tmStart;
-
-    SparseMatrix* matrix;
-    if(type.compare("SNAP") == 0) // type is SNAP
-    {
-        cout << "executing SNAP method.." << endl;
-        if(format.compare("CSR") == 0)
-        {
-            matrix = new SNAPSparseMatrixCSR(inputFile);
-        }
-        else if(format.compare("CSC") == 0)
-        {
-            matrix = new SNAPSparseMatrixCSC(inputFile);
-        }
-        else if(format.compare("COO") == 0)
-        {
-            matrix = new SNAPSparseMatrixCOO(inputFile);
-        }
-        else
-        {
-            cerr << "Unknown format: " << format << endl;
-            return 1;
-        }
-    }
-    else
-    {
-        cout << "executing default method.." << endl;
-        if(format.compare("CSR") == 0)
-        {
-            matrix = new SparseMatrixCSR(inputFile);
-        }
-        else if(format.compare("CSC") == 0)
-        {
-            matrix = new SparseMatrixCSC(inputFile);
-        }
-        else if(format.compare("COO") == 0)
-        {
-            matrix = new SparseMatrixCOO(inputFile);
-        }
-        else
-        {
-            cerr << "Unknown format: " << format << endl;
-            return 1;
-        }
-    }
-
     auto tmInput = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
     cout << "Reading input: " << tmInput << " seconds" << endl;
     tmStart = chrono::high_resolution_clock::now();
@@ -640,6 +592,84 @@ int main(int argc, char** argv)
         of << i << " " << x[i] << "\n";
 
     of.close();
+}
+
+int main(int argc, char** argv)
+{
+    cout << setprecision(16);
+    cerr << setprecision(16);
+
+    if(argc < 4)
+    {
+        cerr << "usage: ./pagerank <type> <format> <input_file>" << endl;
+        return 1;
+    }
+
+    string type = argv[1];
+    string format = argv[2];
+    string inputFile = argv[3];
+
+    cout << "Type: " << type
+    << "\nFormat: " << format 
+    << "\nInput file: " << inputFile
+    << endl;
+
+    auto tmStart = chrono::high_resolution_clock::now();
+
+    SparseMatrix<COO>* coo;
+    SparseMatrix<CSR>* csr;
+    SparseMatrix<CSC>* csc;
+    SparseMatrix<SNAP_COO>* snap_coo;
+    SparseMatrix<SNAP_CSR>* snap_csr;
+    SparseMatrix<SNAP_CSC>* snap_csc;
+    if(type.compare("SNAP") == 0) // type is SNAP
+    {
+        cout << "executing SNAP method.." << endl;
+        if(format.compare("CSR") == 0)
+        {
+            snap_csr = new SparseMatrix<SNAP_CSR>(inputFile);
+            pr(snap_csr, tmStart, inputFile);
+        }
+        else if(format.compare("CSC") == 0)
+        {
+            snap_csc = new SparseMatrix<SNAP_CSC>(inputFile);
+            pr(snap_csc, tmStart, inputFile);
+        }
+        else if(format.compare("COO") == 0)
+        {
+            snap_coo = new SparseMatrix<SNAP_COO>(inputFile);
+            pr(snap_coo, tmStart, inputFile);
+        }
+        else
+        {
+            cerr << "Unknown format: " << format << endl;
+            return 1;
+        }
+    }
+    else
+    {
+        cout << "executing default method.." << endl;
+        if(format.compare("CSR") == 0)
+        {
+            csr = new SparseMatrix<CSR>(inputFile);
+            pr(csr, tmStart, inputFile);
+        }
+        else if(format.compare("CSC") == 0)
+        {
+            csc = new SparseMatrix<CSC>(inputFile);
+            pr(csc, tmStart, inputFile);
+        }
+        else if(format.compare("COO") == 0)
+        {
+            coo = new SparseMatrix<COO>(inputFile);
+            pr(coo, tmStart, inputFile);
+        }
+        else
+        {
+            cerr << "Unknown format: " << format << endl;
+            return 1;
+        }
+    }
 
     return 0;
 }
