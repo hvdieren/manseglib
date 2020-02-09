@@ -3,7 +3,12 @@
 namespace ManSeg
 {
     // internal representation of double, so it can be easily manipulated
-    typedef std::uint64_t doublerep;
+    typedef std::uint_fast64_t doublerep;
+
+    /* Highest achievable precision with a single segment - i.e. TwoSegArray<false> */
+    constexpr double MaxSingleSegmentPrecision = 1e-5;
+    /* decimal precision: num_mantissa_bits*log10(2) = 6.02... */
+    constexpr double AdaptivePrecisionBound = 5e-5;
 
     /*
         Class representing the "head" segment of a double.
@@ -577,16 +582,36 @@ namespace ManSeg
         if(tails) delete[] tails;
     }
 
+    /*
+        Convenience object - allows use of heads & pairs without having to manage
+        two separate objects, or any of the eccentricities that arise from doing so.
+        
+        heads - single segment calculations only (i.e. the first 32 bits of a double)
+        pairs - two segment calculations (i.e. the entire 64 bits of a double)
+    */
+   
+    // todo: add this to mantissa-segmentation project
     class ManSegArray
     {
     public:
         TwoSegArray<false> heads;
         TwoSegArray<true> pairs;
 
+        ManSegArray() {}
+
         ManSegArray(size_t length)
         {
             heads.alloc(length);
             pairs = heads.createFullPrecision();
         }
+
+        void alloc(size_t length)
+        {
+            heads.alloc(length);
+            pairs = heads.createFullPrecision();
+        }
+
+        /* Deletes space allocated to arrays */
+        void del() { heads.del(); }
     };
 }

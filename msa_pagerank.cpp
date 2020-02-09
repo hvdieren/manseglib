@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <regex>
+#include <cmath>
 
 #include "mantissaSegmentation.hpp"
 #include "quicksort.h"
@@ -13,10 +14,10 @@ using namespace std;
 using namespace ManSeg;
 
 constexpr double d = 0.85;
-constexpr double tol = 1e-7;
-// constexpr double tol = 1e-10;
-constexpr int maxIter = 100;
-// constexpr int maxIter = 200;
+// constexpr double tol = 1e-7;
+constexpr double tol = 1e-10;
+// constexpr int maxIter = 100;
+constexpr int maxIter = 200;
 
 enum MatrixType {COO, CSR, CSC, SNAP_COO, SNAP_CSR, SNAP_CSC};
 
@@ -58,7 +59,7 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
     {
         int src, dest;
         for(int i = 0; i < numEdges; ++i)
@@ -69,16 +70,17 @@ public:
         }
     }
 
-    // void iterate(double d, TwoSegArray<true>& prevPr, TwoSegArray<true>& newPr, int outdeg[], double contr[])
-    // {
-    //     int src, dest;
-    //     for(int i = 0; i < numEdges; ++i)
-    //     {
-    //         src = source[i];
-    //         dest = destination[i];
-    //         newPr[dest] += d*(prevPr[src]/outdeg[src]);
-    //     }
-    // }
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
+    {
+        int src, dest;
+        for(int i = 0; i < numEdges; ++i)
+        {
+            src = source[i];
+            dest = destination[i];
+            double val = d*(prevPr[src]/outdeg[src]);
+            newPr.setPair(dest, (newPr[dest] + val));
+        }
+    }
 
     int numVertices;
     int numEdges;
@@ -137,7 +139,7 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -149,6 +151,21 @@ public:
             next = index[i + 1];
             for(int j = curr; j < next; ++j)
                 newPr[dest[j]] += contr[i];
+        }
+    }
+
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
+    {
+        for(int i = 0; i < numVertices; ++i)
+            contr[i] = d*(prevPr[i]/outdeg[i]);
+
+        int curr, next;
+        for(int i = 0; i < numVertices; ++i)
+        {
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
+                newPr.setPair(dest[j], (newPr[dest[j]] + contr[i]));
         }
     }
 
@@ -209,7 +226,7 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -221,6 +238,21 @@ public:
             next = index[i + 1];
             for(int j = curr; j < next; ++j)
                 newPr[i] += contr[source[j]];
+        }
+    }
+
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
+    {
+        for(int i = 0; i < numVertices; ++i)
+            contr[i] = d*(prevPr[i]/outdeg[i]);
+
+        int curr, next;
+        for(int i = 0; i < numVertices; ++i)
+        {
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
+                newPr.setPair(i, (newPr[i] + contr[source[j]]));
         }
     }
 
@@ -283,7 +315,7 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
     {
         int src, dest;
         for(int i = 0; i < numEdges; ++i)
@@ -291,6 +323,18 @@ public:
             src = source[i];
             dest = destination[i];
             newPr[dest] += d*(prevPr[src]/outdeg[src]);
+        }
+    }
+
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
+    {
+        int src, dest;
+        for(int i = 0; i < numEdges; ++i)
+        {
+            src = source[i];
+            dest = destination[i];
+            double val = d*(prevPr[src]/outdeg[src]);
+            newPr.setPair(dest, (newPr[dest] + val));
         }
     }
 
@@ -363,7 +407,7 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -375,6 +419,21 @@ public:
             next = index[i + 1];
             for(int j = curr; j < next; ++j)
                 newPr[dest[j]] += contr[i];
+        }
+    }
+
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
+    {
+        for(int i = 0; i < numVertices; ++i)
+            contr[i] = d*(prevPr[i]/outdeg[i]);
+
+        int curr, next;
+        for(int i = 0; i < numVertices; ++i)
+        {
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
+                newPr.setPair(dest[j], (newPr[dest[j]] + contr[i]));
         }
     }
 
@@ -462,7 +521,7 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], TwoSegArray& contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -474,6 +533,21 @@ public:
             next = index[i + 1];
             for(int j = curr; j < next; ++j)
                 newPr[i] += contr[source[j]];
+        }
+    }
+
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
+    {
+        for(int i = 0; i < numVertices; ++i)
+            contr[i] = d*(prevPr[i]/outdeg[i]);
+
+        int curr, next;
+        for(int i = 0; i < numVertices; ++i)
+        {
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
+                newPr.setPair(i, (newPr[i] + contr[source[j]]));
         }
     }
 
@@ -503,20 +577,28 @@ double sum(TwoSegArray& a, int& n)
 }
 
 template<class TwoSegArray>
+// x, y, n
 double normDiff(TwoSegArray& a, TwoSegArray& b, int& n)
 {
     double d = 0.0;
     double err = 0.0;
     for(int i = 0; i < n; ++i)
     {
-        // does d += abs(b[i] - a[i]) with high accuracy
+        // does d += fabs(b[i] - a[i]) with high accuracy
         double temp = d;
-        double y = abs(b[i] - a[i]) + err;
+        double y = std::fabs(b[i] - a[i]) + err;
         d = temp + y;
         err = temp - d;
         err += y;
     }
     return d;
+}
+
+template<class TwoSegArray>
+void scaleValues(TwoSegArray& a, double& w, int& n)
+{
+    for(int i = 0; i < n; ++i)
+        a[i] += w;
 }
 
 template<class SparseMatrix>
@@ -528,23 +610,20 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     tmStart = chrono::high_resolution_clock::now();
 
     int n = matrix->numVertices;
-    TwoSegArray<false>x_f(n); // pagerank
-    TwoSegArray<true>x_t = x_f.createFullPrecision();     // <--- should *more or less* equivalent to just creating true then assigning things
-    TwoSegArray<false>v_f(n);                //      i.e. this should work fine and if it doesn't there's something wrong
-    TwoSegArray<true>v_t = v_f.createFullPrecision();
-    TwoSegArray<false>y_f(n); // new pagerank
-    TwoSegArray<true>y_t = y_f.createFullPrecision();
+    ManSegArray x(n); // pagerank
+    // ManSegArray v(n); 
+    ManSegArray y(n);
     int* outdeg = new int[n];
-    TwoSegArray<false>contr_f(n); // contribution for each vertex
-    TwoSegArray<true>contr_t = contr_f.createFullPrecision();
+    double* contr = new double[n];
 
     double delta = 2.0;
     int iter = 0;
 
+    double oneOverN = (1.0/static_cast<double>(n));
     for(int i = 0; i < n; ++i)
     {
-        x_f[i] = v_t[i] = (1.0 / (double)(n));
-        outdeg[i] = y_f[i] = 0.0;
+        x.heads[i] = oneOverN;
+        outdeg[i] = y.heads[i] = 0.0;
     }
 
     matrix->calculateOutDegree(outdeg);
@@ -556,105 +635,85 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
 
     auto iterateS = chrono::high_resolution_clock::now();
     
-    
-    // set this to true to only use full precision
-    // bool changePrecision = false;
-    // while(iter < maxIter && delta > tol)
-    // {
-    //     if(!changePrecision)
-    //     {
-    //         matrix->iterate(d, x_f, y_f, outdeg, contr_f);
-
-    //         double w = (1.0 - sum(y_f, n));
-    //         for(int i = 0; i < n; ++i)
-    //             y_f[i] += w * v_f[i];
-
-    //         delta = normDiff(x_f, y_f, n);
-    //         ++iter;
-            
-    //         if(delta <= 1e-5) 
-    //         {
-    //             changePrecision = true; // i think this is the limit of precision heads only can do
-    //             cout << "==========\nincreased precision\n==========\n";
-    //         }
-
-    //         for(int i = 0; i < n; ++i)
-    //         {
-    //             x_f[i] = y_f[i];
-    //             y_f[i] = 0.0;
-    //         }
-
-    //         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
-    //         cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_f, n) 
-    //             << " time=" << tmStep << " seconds" << endl;
-    //     }
-    //     else
-    //     {
-    //         matrix->iterate(d, x_t, y_t, outdeg, contr_t);
-
-    //         double w = (1.0 - sum(y_t, n));
-    //         for(int i = 0; i < n; ++i)
-    //             y_t[i] += w * v_t[i];
-
-    //         delta = normDiff(x_t, y_t, n);
-    //         ++iter;
-
-    //         for(int i = 0; i < n; ++i)
-    //         {
-    //             x_t[i] = y_t[i];
-    //             y_t[i] = 0.0;
-    //         }
-
-    //         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
-    //         cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_t, n) 
-    //             << " time=" << tmStep << " seconds" << endl;
-    //     }
-
-    //     tmStart = chrono::high_resolution_clock::now();
-    // }
-    while(iter < maxIter && delta > 1e-5) // use heads only
+    while(iter < maxIter && delta > AdaptivePrecisionBound) // use heads only
     {
-        matrix->iterate(d, x_f, y_f, outdeg, contr_f);
+        matrix->iterate(d, x.heads, y.heads, outdeg, contr);
 
-        double w = (1.0 - sum(y_f, n));
-        for(int i = 0; i < n; ++i)
-            y_f[i] += w * v_f[i];
+        double w = (1.0 - sum(y.heads, n))*oneOverN;
+        scaleValues(y.heads, w, n);
 
-        delta = normDiff(x_f, y_f, n);
+        delta = normDiff(x.heads, y.heads, n);
         ++iter;
         
         for(int i = 0; i < n; ++i)
         {
-            x_f[i] = y_f[i];
-            y_f[i] = 0.0;
+            x.heads[i] = y.heads[i];
+            y.heads[i] = 0.0;
         }
 
         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
-        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_f, n) 
+        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x.heads, n) 
             << " time=" << tmStep << " seconds" << endl;
         
         tmStart = chrono::high_resolution_clock::now();
     }
+    cout << "\n=========================\nInterim Step\n=========================" << endl;
+    
+    /*
+        if delta is close to current working precision, the following
+        steps are executed: 
+
+        1) run the PageRank iteration while reading in current
+           precision, and writing in the new, extended precision;
+        2) normalize the vector in the new precision, so we can
+           ensure that the norm of the PageRank-vector p^k stays
+           at 1; and
+        3) set the new precision as current working precision;
+           The normalization is necessary because, while writing back,
+           the floating point representation is “cut”, which leads to a
+           rounding towards zero. This, in turn, leads to ||p^k|| < 1
+    */
+    {
+        matrix->iterate_fullSet(d, x.heads, y.heads, outdeg, contr);
+    
+        double w = (1.0 - sum(y.pairs, n))*oneOverN;
+        scaleValues(y.pairs, w, n);
+
+        delta = normDiff(x.pairs, y.pairs, n);
+        ++iter;
+        
+        for(int i = 0; i < n; ++i)
+        {
+            x.pairs[i] = y.pairs[i];
+            y.pairs[i] = 0.0;
+        }
+
+        auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
+        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x.heads, n) 
+            << " time=" << tmStep << " seconds" << endl;
+        tmStart = chrono::high_resolution_clock::now();
+    }
+    
     cout << "\n=========================\nIncreased Precision\n=========================" << endl;
     while(iter < maxIter && delta > tol) // use full precision
     {
-        matrix->iterate(d, x_t, y_t, outdeg, contr_t);
+        matrix->iterate(d, x.pairs, y.pairs, outdeg, contr);
 
-        double w = (1.0 - sum(y_t, n));
-        for(int i = 0; i < n; ++i)
-            y_t[i] += w * v_t[i];
+        double w = (1.0 - sum(y.pairs, n))*oneOverN;
 
-        delta = normDiff(x_t, y_t, n);
+        scaleValues(y.pairs, w, n);
+
+        delta = normDiff(x.pairs, y.pairs, n);
         ++iter;
 
         for(int i = 0; i < n; ++i)
         {
-            x_t[i] = y_t[i];
-            y_t[i] = 0.0;
+            x.pairs[i] = y.pairs[i];
+            y.pairs[i] = 0.0;
         }
  
         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
-        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x_t, n) 
+        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x.pairs, n) 
             << " time=" << tmStep << " seconds" << endl;
         tmStart = chrono::high_resolution_clock::now();
     }
@@ -686,14 +745,13 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
 
     of << setprecision(16);
     for(int i = 0; i < n; ++i)
-        of << i << " " << x_t[i] << "\n";
+        of << i << " " << x.pairs[i] << "\n";
 
     of.close();
 
-    x_t.del();
-    y_t.del();
-    v_t.del();
-    contr_t.del();
+    x.del();
+    y.del();
+    delete[] contr;
 }
 
 int main(int argc, char** argv)
@@ -726,7 +784,7 @@ int main(int argc, char** argv)
     SparseMatrix<SNAP_CSC>* snap_csc;
     if(type.compare("SNAP") == 0) // type is SNAP
     {
-        cout << "executing SNAP method.." << endl;
+        cout << "SNAP format" << endl;
         if(format.compare("CSR") == 0)
         {
             snap_csr = new SparseMatrix<SNAP_CSR>(inputFile);
@@ -750,7 +808,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        cout << "executing default method.." << endl;
+        cout << "GraphType format" << endl;
         if(format.compare("CSR") == 0)
         {
             csr = new SparseMatrix<CSR>(inputFile);

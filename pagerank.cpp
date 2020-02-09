@@ -8,16 +8,17 @@
 #include <vector>
 #include <iterator>
 #include <regex>
+#include <cmath>
 
 #include "quicksort.h"
 
 using namespace std;
 
 constexpr double d = 0.85;     // this is already a real-ish world precision
-constexpr double tol = 1e-7;
-// constexpr double tol = 1e-10;  // a more real-ish world precision
-constexpr int maxIter = 100;
-// constexpr int maxIter = 200;   // double potential iterations to counter this..?
+// constexpr double tol = 1e-7;
+constexpr double tol = 1e-10;  // a more real-ish world precision
+// constexpr int maxIter = 100;
+constexpr int maxIter = 200;   // double potential iterations to counter this..?
 
 enum MatrixType {COO, CSR, CSC, SNAP_COO, SNAP_CSR, SNAP_CSC};
 
@@ -496,9 +497,9 @@ double normDiff(double* a, double* b, int& n)
     double err = 0.0;
     for(int i = 0; i < n; ++i)
     {
-        // does d += abs(b[i] - a[i]) with high accuracy
+        // does d += fabs(b[i] - a[i]) with high accuracy
         double temp = d;
-        double y = abs(b[i] - a[i]) + err;
+        double y = std::fabs(b[i] - a[i]) + err;
         d = temp + y;
         err = temp - d;
         err += y;
@@ -524,9 +525,10 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     double delta = 2.0;
     int iter = 0;
 
+    const double oneOverN = 1.0 / (double)(n);
     for(int i = 0; i < n; ++i)
     {
-        x[i] = v[i] = 1.0 / (double)(n);
+        x[i] = oneOverN;
         y[i] = outdeg[i] = 0.0;
     }
 
@@ -538,13 +540,16 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     tmStart = chrono::high_resolution_clock::now();
 
     auto iterateS = chrono::high_resolution_clock::now();
+
+    double addedConstant = ( (1-d)/(double)n );
+
     while(iter < maxIter && delta > tol)
     {
         matrix->iterate(d, x, y, outdeg, contr);
 
-        double w = 1.0 - sum(y, n);
+        double w = (1.0 - sum(y, n))*oneOverN;
         for(int i = 0; i < n; ++i)
-            y[i] += w * v[i];
+            y[i] += w;
 
         delta = normDiff(x, y, n);
         ++iter;
@@ -558,7 +563,6 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
         cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x, n) 
             << " time=" << tmStep << " seconds" << endl;
-
         tmStart = chrono::high_resolution_clock::now();
     }
     auto endT = chrono::high_resolution_clock::now();
@@ -624,7 +628,7 @@ int main(int argc, char** argv)
     SparseMatrix<SNAP_CSC>* snap_csc;
     if(type.compare("SNAP") == 0) // type is SNAP
     {
-        cout << "executing SNAP method.." << endl;
+        cout << "SNAP format" << endl;
         if(format.compare("CSR") == 0)
         {
             snap_csr = new SparseMatrix<SNAP_CSR>(inputFile);
@@ -648,7 +652,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        cout << "executing default method.." << endl;
+        cout << "GraphType format" << endl;
         if(format.compare("CSR") == 0)
         {
             csr = new SparseMatrix<CSR>(inputFile);

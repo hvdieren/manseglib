@@ -50,7 +50,6 @@ void printBinary(int l)
     }
 }
 
-
 int main(int argc, char** argv)
 {
     using fArray = TwoSegArray<false>;
@@ -80,8 +79,13 @@ int main(int argc, char** argv)
     f1[4] = f[4];
 
     for(int i = 0; i < size; ++i)
-        std::cout << i << ":f -> " << f[i] << "\t\tf1 -> " << f1[i] << "\n";
+        std::cout << i << ":f -> " << (double)f[i] << "\t\tf1 -> " << (double)f1[i] << "\n";
     std::cout << "\n";
+
+    unsigned int& h = f1[0].head;
+    unsigned int& t = f1[0].tail;
+
+    std::cout << h << " " << t << std::endl;
 
     return 0;
 }
