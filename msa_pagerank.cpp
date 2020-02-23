@@ -8,16 +8,17 @@
 #include <cmath>
 
 #include "mantissaSegmentation.hpp"
+// #include "mantissaSegmentation_s.hpp"
 #include "quicksort.h"
 
 using namespace std;
 using namespace ManSeg;
 
 constexpr double d = 0.85;
-// constexpr double tol = 1e-7;
-constexpr double tol = 1e-10;
-// constexpr int maxIter = 100;
-constexpr int maxIter = 200;
+constexpr double tol = 1e-7;
+// constexpr double tol = 1e-10;
+constexpr int maxIter = 100;
+// constexpr int maxIter = 200;
 
 enum MatrixType {COO, CSR, CSC, SNAP_COO, SNAP_CSR, SNAP_CSC};
 

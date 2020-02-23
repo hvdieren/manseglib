@@ -1,12 +1,12 @@
-main: main.o
-	g++ -o main main.o
-
 all: 
 	make main tests pagerank pagerank_check msa_pagerank
 
+main: main.o
+	g++ -o main main.o
+
 .PHONY: main.o
 main.o: main.cpp mantissaSegmentation.hpp
-	g++ -c main.cpp 
+	g++ -O0 -c main.cpp 
 
 tests: tests.o
 	g++ -o tests tests.o

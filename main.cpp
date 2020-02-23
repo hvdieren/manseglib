@@ -7,6 +7,7 @@
 #include <math.h>
 
 #include "mantissaSegmentation.hpp"
+// #include "mantissaSegmentation_s.hpp"
 #include "quicksort.h"
 
 using namespace ManSeg;
@@ -52,6 +53,8 @@ void printBinary(int l)
 
 int main(int argc, char** argv)
 {
+    std::cout << std::setprecision(16);
+
     using fArray = TwoSegArray<false>;
     using tArray = TwoSegArray<true>;
 
@@ -65,8 +68,12 @@ int main(int argc, char** argv)
     // f.setPair(2, 22);
     // f.setPair(3, 45L);
     // f.setPair(4, true);
+
+    std::cout << "sizeof(std::uint_fast32) = " << sizeof(std::uint32_t)*8 << std::endl;
+
+    return 0;
    
-    f[0] = 0.1;
+    f[0] = 0.38572985629756297361978;
     f[1] = 1.4f;
     f[2] = 22;
     f[3] = 45L;
@@ -79,13 +86,8 @@ int main(int argc, char** argv)
     f1[4] = f[4];
 
     for(int i = 0; i < size; ++i)
-        std::cout << i << ":f -> " << (double)f[i] << "\t\tf1 -> " << (double)f1[i] << "\n";
+        std::cout << i << ":f -> " << f[i] << "\t\tf1 -> " << f1[i] << "\n";
     std::cout << "\n";
-
-    unsigned int& h = f1[0].head;
-    unsigned int& t = f1[0].tail;
-
-    std::cout << h << " " << t << std::endl;
 
     return 0;
 }

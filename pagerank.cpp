@@ -15,10 +15,10 @@
 using namespace std;
 
 constexpr double d = 0.85;     // this is already a real-ish world precision
-// constexpr double tol = 1e-7;
-constexpr double tol = 1e-10;  // a more real-ish world precision
-// constexpr int maxIter = 100;
-constexpr int maxIter = 200;   // double potential iterations to counter this..?
+constexpr double tol = 1e-7;
+// constexpr double tol = 1e-10;  // a more real-ish world precision
+constexpr int maxIter = 100;
+// constexpr int maxIter = 200;   // double potential iterations to counter this..?
 
 enum MatrixType {COO, CSR, CSC, SNAP_COO, SNAP_CSR, SNAP_CSC};
 
@@ -540,8 +540,6 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     tmStart = chrono::high_resolution_clock::now();
 
     auto iterateS = chrono::high_resolution_clock::now();
-
-    double addedConstant = ( (1-d)/(double)n );
 
     while(iter < maxIter && delta > tol)
     {

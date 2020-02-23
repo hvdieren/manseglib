@@ -6,7 +6,8 @@
 #include <chrono>
 #include <math.h>
 
-#include "mantissaSegmentation.hpp"
+// #include "mantissaSegmentation.hpp"
+#include "mantissaSegmentation_s.hpp"
 
 using namespace ManSeg;
 
