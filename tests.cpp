@@ -7,7 +7,7 @@
 #include <math.h>
 
 // #include "mantissaSegmentation.hpp"
-#include "mantissaSegmentation_s.hpp"
+#include "mantissaSegmentation_f.hpp"
 
 using namespace ManSeg;
 
@@ -228,14 +228,14 @@ void fill(double* d, TwoSegArray<true>& y, int* v, const int& size)
         v[i] = (i+1);
     }
 }
-constexpr int size = 10000;
+constexpr int size = 50000;
 constexpr double val = 0.85;
 // tried to replicate what pagerank was doing
 // in a small tester function for micro benchmarking
 // not exactly the same, but somewhat close.
 void test4(bool usePairs)
 {
-    TwoSegArray<false> x(size);                  // x = heads
+    TwoSegArray<false> x(size);                                 // x = heads
     TwoSegArray<true> y = x.createFullPrecision();            // y = pairs
 
     int* v = new int[size];

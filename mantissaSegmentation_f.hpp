@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <immintrin.h>
 
 namespace ManSeg
 {
@@ -23,7 +24,7 @@ namespace ManSeg
     class Head
     {
     public:
-        Head(std::uint32_t& head)
+        Head(float& head)
             :head(head)
         {}
 
@@ -43,12 +44,12 @@ namespace ManSeg
 
         operator double() const
         {
-            doublerep l = head;
-            l <<= segmentBits;
-            return *reinterpret_cast<double*>(&l);
+            __m128 seg_v = {0.0f, head};
+            __m128d d_v = _mm_castps_pd(seg_v);
+            return *reinterpret_cast<double*>(&d_v);
         }
 
-        std::uint32_t& head;
+        float& head;
         static constexpr int segmentBits = 32;
 
     };
@@ -64,7 +65,7 @@ namespace ManSeg
     class Pair
     {
     public:
-        Pair(std::uint32_t& head, std::uint32_t& tail)
+        Pair(float& head, float& tail)
             :head(head), tail(tail)
         {}
 
@@ -86,14 +87,13 @@ namespace ManSeg
 
         operator double() const
         {
-            doublerep l = head;
-            l <<= segmentBits;
-            l |= tail;
-            return *reinterpret_cast<double*>(&l);
+            __m128 seg_v = {tail, head};
+            __m128d d_v = _mm_castps_pd(seg_v);
+            return *reinterpret_cast<double*>(&d_v);
         }
 
-        std::uint32_t& head;
-        std::uint32_t& tail;
+        float& head;
+        float& tail;
         static constexpr int segmentBits = 32;
         static constexpr std::uint32_t tailMask = ~0;
 
@@ -118,13 +118,13 @@ namespace ManSeg
     public:
         TwoSegArray() {}
 
-        TwoSegArray(std::uint_fast64_t length)
+        TwoSegArray(const std::uint_fast64_t& length)
         {
-            heads = new std::uint32_t[length];
-            tails = new std::uint32_t[length];
+            heads = new float[length];
+            tails = new float[length];
         }
 
-        TwoSegArray(std::uint32_t* heads, std::uint32_t* tails)
+        TwoSegArray(float* heads, float* tails)
             :heads(heads), tails(tails)
         {}
 
@@ -135,13 +135,13 @@ namespace ManSeg
         }
 
         template<typename T>
-        void set(std::uint_fast64_t id, T t);
+        void set(const std::uint_fast64_t& id, const T& t);
         template<typename T>
-        void setPair(std::uint_fast64_t id, T t);
+        void setPair(const std::uint_fast64_t& id, const T& t);
 
-        double read(std::uint_fast64_t id);
+        double read(const std::uint_fast64_t& id);
 
-        Head operator[](std::uint_fast64_t id);
+        Head operator[](const std::uint_fast64_t& id);
 
         /*
             Increases the precision of the operations performed by returning an
@@ -150,7 +150,7 @@ namespace ManSeg
         */
         TwoSegArray<true> createFullPrecision();
 
-        void alloc(std::uint_fast64_t length);
+        void alloc(const std::uint_fast64_t& length);
         /*
             Deletes the values of the dynamic arrays used to store values in
             the array.
@@ -160,8 +160,8 @@ namespace ManSeg
         void del();
 
     private:
-        std::uint32_t* heads;
-        std::uint32_t* tails;
+        float* heads;
+        float* tails;
 
         static constexpr int segmentBits = 32;
         static constexpr std::uint32_t tailMask = ~0;
@@ -179,13 +179,13 @@ namespace ManSeg
     public:
         TwoSegArray() {}
 
-        TwoSegArray(std::uint_fast64_t length)
+        TwoSegArray(const std::uint_fast64_t& length)
         {
-            heads = new std::uint32_t[length];
-            tails = new std::uint32_t[length];
+            heads = new float[length];
+            tails = new float[length];
         }
 
-        TwoSegArray(std::uint32_t* heads, std::uint32_t* tails)
+        TwoSegArray(float* heads, float* tails)
             :heads(heads), tails(tails)
         {}
 
@@ -195,20 +195,20 @@ namespace ManSeg
             tails = nullptr;
         }
 
-        Pair operator[](std::uint_fast64_t id);
+        Pair operator[](const std::uint_fast64_t& id);
 
         template<typename T>
-        void set(std::uint_fast64_t id, T t);
+        void set(const std::uint_fast64_t& id, const T& t);
         template<typename T>
-        void setPair(std::uint_fast64_t id, T t);
-        double read(std::uint_fast64_t id);
+        void setPair(const std::uint_fast64_t& id, const T& t);
+        double read(const std::uint_fast64_t& id);
 
         /*
             Returns *this (as we do not have any precision increase to do)
         */
         TwoSegArray<true> createFullPrecision();
 
-        void alloc(std::uint_fast64_t length);
+        void alloc(const std::uint_fast64_t& length);
         /*
             Deletes the values of the dynamic arrays used to store values in
             the array.
@@ -218,8 +218,8 @@ namespace ManSeg
         void del();
 
     private:
-        std::uint32_t* heads;
-        std::uint32_t* tails;
+        float* heads;
+        float* tails;
 
         static constexpr int segmentBits = 32;
         static constexpr std::uint32_t tailMask = ~0;
@@ -234,7 +234,7 @@ namespace ManSeg
     template<>
     Head& Head::operator=(const Head& other)
     {
-        std::uint32_t h = other.head;
+        float h = other.head;
         head = h;
         return *this;
     }
@@ -242,7 +242,7 @@ namespace ManSeg
     template<>
     Head& Head::operator=(const Head&& other) noexcept
     {
-        std::uint32_t h = other.head;
+        float h = other.head;
         head = h;
         return *this;
     }
@@ -250,7 +250,7 @@ namespace ManSeg
     template<>
     Head& Head::operator=(const Pair& other)
     {
-        std::uint32_t h = other.head;
+        float h = other.head;
         head = h;
         return *this;
     }
@@ -258,17 +258,19 @@ namespace ManSeg
     template<>
     Head& Head::operator=(const Pair&& other) noexcept
     {
-        std::uint32_t h = other.head;
+        float h = other.head;
         head = h;
         return *this;
     }
 
     template<typename T>
-    Head& Head::operator=(const T& rhs)
+    Head& Head::operator=(const T& other)
     {
-        double d = rhs;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        head = (l >> segmentBits);
+        double d = other;
+        __m128d d_v = {d};
+        __m128 seg_v = _mm_castpd_ps(d_v);
+        head = seg_v[1];
+
         return *this;
     }
 
@@ -276,10 +278,14 @@ namespace ManSeg
     Head& Head::operator=(const T&& other) noexcept
     {
         double d = other;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        std::uint32_t h = (l >> segmentBits);
+        __m128d d_v = {d};
+        __m128 seg_v = _mm_castpd_ps(d_v);
+        head = seg_v[1];
 
-        head = h;
+        // __m128d seg_v = {d, 0.0};
+        // __m128 seg_fv = *reinterpret_cast<__m128*>(&seg_v);
+        // head = seg_fv[1];
+
         return *this;
     }
 
@@ -287,10 +293,8 @@ namespace ManSeg
     double Head::operator+=(const T& rhs)
     {
         double t = *this;
-
         t += rhs;
         *this = t;
-
         return t;
     }
 
@@ -356,11 +360,10 @@ namespace ManSeg
     /**
      * ManSegPair functions
     */
-
     template<>
     Pair& Pair::operator=(const Head& other)
     {
-        std::uint32_t h = other.head;
+        float h = other.head;
         head = h;
         return *this;
     }
@@ -368,15 +371,15 @@ namespace ManSeg
     template<>
     Pair& Pair::operator=(const Head&& other) noexcept
     {
-        std::uint32_t h = other.head;
+        float h = other.head;
         head = h;
         return *this;
     }
 
     Pair& Pair::operator=(const Pair& other)
     {
-        std::uint32_t h = other.head;
-        std::uint32_t t = other.tail;
+        float h = other.head;
+        float t = other.tail;
         head = h;
         tail = t;
         return *this;
@@ -385,8 +388,8 @@ namespace ManSeg
     template<>
     Pair& Pair::operator=(const Pair&& other) noexcept
     {
-        std::uint32_t h = other.head;
-        std::uint32_t t = other.tail;
+        float h = other.head;
+        float t = other.tail;
         head = h;
         tail = t;
         return *this;
@@ -396,11 +399,11 @@ namespace ManSeg
     Pair& Pair::operator=(const T&& other) noexcept
     {
         double d = other;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        std::uint32_t h = (l >> segmentBits);
-        std::uint32_t t = (l & tailMask);
-        head = h;
-        tail = t;
+        __m128d d_v = {d};
+        __m128 seg_v = _mm_castpd_ps(d_v);
+        tail = seg_v[0];
+        head = seg_v[1];
+
         return *this;
     }
 
@@ -408,11 +411,11 @@ namespace ManSeg
     Pair& Pair::operator=(const T& other)
     {
         double d = other;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        std::uint32_t h = (l >> segmentBits);
-        std::uint32_t t = (l & tailMask);
-        head = h;
-        tail = t;
+        __m128d d_v = {d};
+        __m128 seg_v = _mm_castpd_ps(d_v);
+        tail = seg_v[0];
+        head = seg_v[1];
+
         return *this;
     }
 
@@ -420,7 +423,8 @@ namespace ManSeg
     double Pair::operator+=(const T& rhs)
     {
         double t = *this;
-        t += rhs;
+        double r = rhs;
+        t += r;
         *this = t;
         return t;
     }
@@ -429,7 +433,8 @@ namespace ManSeg
     inline double operator+(Pair lhs, const T& rhs)
     {
         double d = lhs;
-        d += rhs;
+        double r = rhs;
+        d += r;
         return d;
     }
 
@@ -437,7 +442,8 @@ namespace ManSeg
     double Pair::operator-=(const T& rhs)
     {
         double t = *this;
-        t -= rhs;
+        double r = rhs;
+        t -= r;
         *this = t;
         return t;
     }
@@ -446,7 +452,8 @@ namespace ManSeg
     inline double operator-(Pair lhs, const T& rhs)
     {
         double d = lhs;
-        d -= rhs;
+        double r = rhs;
+        d -= r;
         return d;
     }
 
@@ -454,7 +461,8 @@ namespace ManSeg
     double Pair::operator*=(const T& rhs)
     {
         double t = *this;
-        t *= rhs;
+        double r = rhs;
+        t *= r;
         *this = t;
         return t;
     }
@@ -463,7 +471,8 @@ namespace ManSeg
     inline double operator*(Pair lhs, const T& rhs)
     {
         double d = lhs;
-        d *= rhs;
+        double r = rhs;
+        d *= r;
         return d;
     }
 
@@ -471,7 +480,8 @@ namespace ManSeg
     double Pair::operator/=(const T& rhs)
     {
         double t = *this;
-        t /= rhs;
+        double r = rhs;
+        t /= r;
         *this = t;
         return t;
     }
@@ -480,7 +490,8 @@ namespace ManSeg
     inline double operator/(Pair lhs, const T& rhs)
     {
         double d = lhs;
-        d /= rhs;
+        double r = rhs;
+        d /= r;
         return d;
     }
 
@@ -494,28 +505,30 @@ namespace ManSeg
      * (heads only)
     */
     template<typename T>
-    void TwoSegArray<false>::set(std::uint_fast64_t id, T t)
+    void TwoSegArray<false>::set(const std::uint_fast64_t& id, const T& t)
     {
         double d = t;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        heads[id] = (l >> segmentBits);
+        __m128d d_v = {d};
+        __m128 seg_v = _mm_castpd_ps(d_v);
+        heads[id] = seg_v[1];
     }
 
     template<typename T>
-    void TwoSegArray<false>::setPair(std::uint_fast64_t id, T t)
+    void TwoSegArray<false>::setPair(const std::uint_fast64_t& id, const T& t)
     {
         double d = t;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        heads[id] = l >> segmentBits;
-        tails[id] = (l & tailMask);
+        __m128d d_v = {d};
+        __m128 seg_v = _mm_castpd_ps(d_v);
+        tails[id] = seg_v[0];
+        heads[id] = seg_v[1];
     }
 
-    double TwoSegArray<false>::read(std::uint_fast64_t id)
+    double TwoSegArray<false>::read(const std::uint_fast64_t& id)
     {
         return static_cast<double>(Head(heads[id]));
     }
 
-    Head TwoSegArray<false>::operator[](std::uint_fast64_t id)
+    Head TwoSegArray<false>::operator[](const std::uint_fast64_t& id)
     {
         return Head(heads[id]);
     }
@@ -525,10 +538,10 @@ namespace ManSeg
         return TwoSegArray<true>(heads, tails);
     }
 
-    void TwoSegArray<false>::alloc(std::uint_fast64_t length)
+    void TwoSegArray<false>::alloc(const std::uint_fast64_t& length)
     {
-        heads = new std::uint32_t[length];
-        tails = new std::uint32_t[length];
+        heads = new float[length];
+        tails = new float[length];
     }
 
     void TwoSegArray<false>::del()
@@ -543,29 +556,31 @@ namespace ManSeg
      * (heads + tails)
     */
     template<typename T>
-    void TwoSegArray<true>::set(std::uint_fast64_t id, T t)
+    void TwoSegArray<true>::set(const std::uint_fast64_t& id, const T& t)
     {
         double d = t;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        heads[id] = l >> segmentBits;
-        tails[id] = (l & tailMask);
+        __m128d d_v = {d};
+        __m128 seg_v = _mm_castpd_ps(d_v);
+        tails[id] = seg_v[0];
+        heads[id] = seg_v[1];
     }
 
     template<typename T>
-    void TwoSegArray<true>::setPair(std::uint_fast64_t id, T t)
+    void TwoSegArray<true>::setPair(const std::uint_fast64_t& id, const T& t)
     {
         double d = t;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        heads[id] = l >> segmentBits;
-        tails[id] = (l & tailMask);
+        __m128d d_v = {d};
+        __m128 seg_v = _mm_castpd_ps(d_v);
+        tails[id] = seg_v[0];
+        heads[id] = seg_v[1];
     }
 
-    double TwoSegArray<true>::read(std::uint_fast64_t id)
+    double TwoSegArray<true>::read(const std::uint_fast64_t& id)
     {
         return static_cast<double>(Pair(heads[id], tails[id]));
     }
 
-    Pair TwoSegArray<true>::operator[](std::uint_fast64_t id)
+    Pair TwoSegArray<true>::operator[](const std::uint_fast64_t& id)
     {
         return Pair(heads[id], tails[id]);
     }
@@ -575,10 +590,10 @@ namespace ManSeg
         return *this;
     }
 
-    void TwoSegArray<true>::alloc(std::uint_fast64_t length)
+    void TwoSegArray<true>::alloc(const std::uint_fast64_t& length)
     {
-        heads = new std::uint32_t[length];
-        tails = new std::uint32_t[length];
+        heads = new float[length];
+        tails = new float[length];
     }
 
     void TwoSegArray<true>::del()
@@ -604,13 +619,13 @@ namespace ManSeg
 
         ManSegArray() {}
 
-        ManSegArray(std::uint_fast64_t length)
+        ManSegArray(const std::uint_fast64_t& length)
         {
             heads.alloc(length);
             pairs = heads.createFullPrecision();
         }
 
-        void alloc(std::uint_fast64_t length)
+        void alloc(const std::uint_fast64_t& length)
         {
             heads.alloc(length);
             pairs = heads.createFullPrecision();

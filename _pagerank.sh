@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# rm pagerank pagerank.o msa_pagerank msa_pagerank.o
-# rm msa_pagerank msa_pagerank.o
+rm pagerank pagerank.o msa_pagerank msa_pagerank.o
+rm msa_pagerank msa_pagerank.o
 
-# make pagerank msa_pagerank
+make pagerank msa_pagerank
 # make msa_pagerank
 
 ## default small graphs ##
 # std
-# echo "std version"
+echo "std version"
 # COO
 # ./pagerank default COO "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/smallGraph.coo"
 # ./pagerank default COO "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/orkut_undir.coo"
@@ -27,8 +27,8 @@
 ./pagerank default CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/LiveJournal_dir.csc"
 # ./pagerank default CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/rMatGraph_J_5_100.csc"
 
-# echo ""
-# echo "msa version"
+echo ""
+echo "msa version"
 # msa version
 # COO
 # ./msa_pagerank default COO "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/smallGraph.coo"
