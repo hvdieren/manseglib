@@ -1,17 +1,45 @@
-# dirs
+##  dirs  ##
 .vscode/
 results/
+benchmarks/visual_cpp_pagerank/.vs/
+benchmarks/visual_cpp_pagerank/Debug/
+benchmarks/visual_cpp_pagerank/Release/
+benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Debug/
+benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Release/
 
-# files
+##  files  ##
 *.o
 *.class
+*.mtx
+*.txt
+*.out
+*.pr_vals
+*.png
 
-main
+##  binaries  ##
+
+# conjugate_gradient
+sparsesolve
+
+# jacobi_stencil
+J_jacobi_omp
+J_Jacobi_up
+J_jacobi
+jacobi_mod
+jacobi_mod_f
+jacobi_mod_f_omp
+jacobi_mod_omp
+jacobi_omp
+
+# local_pagerank
 pagerank
 pagerank_check
 msa_pagerank
 pagerank_parallel
 msa_pagerank_parallel
+
+# misc
+main
+tests
 _oldMantissaSegmentationTester.hpp
 _olderbackupMantissaSegmentation.hpp.BAK
-tests

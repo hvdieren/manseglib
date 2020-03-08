@@ -12,48 +12,69 @@
 using namespace ManSeg;
 
 // print binary of double
-// void printBinary(double d)
-// {
-//     unsigned long l = *reinterpret_cast<unsigned long*>(&d);
-//     for(int i = 63; i >= 0; --i)
-//     {
-//         std::cout << ((l >> i) & 1);
-//         if(i == 63 || i == 52)
-//             std::cout << " ";
-//         else if(i == 32)
-//             std::cout << "|";
-//     }
-//     std::cout << std::endl;
-// }
+void printBinary(double d)
+{
+    unsigned long l = *reinterpret_cast<unsigned long*>(&d);
+    for(int i = 63; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i == 63 || i == 52)
+            std::cout << " ";
+        else if(i == 32)
+            std::cout << "|";
+    }
+}
 
-// // print binary of float
-// void printBinary(float f)
-// {
-//     unsigned int l = *reinterpret_cast<unsigned int*>(&f);
-//     for(int i = 31; i >= 0; --i)
-//     {
-//         std::cout << ((l >> i) & 1);
-//         if(i == 31 || i == 23)
-//             std::cout << " ";
-//     }
-//     std::cout << std::endl;
-// }
+// print binary of float
+void printBinary(float f)
+{
+    unsigned int l = *reinterpret_cast<unsigned int*>(&f);
+    for(int i = 31; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i == 31 || i == 23)
+            std::cout << " ";
+    }
+    std::cout << std::endl;
+}
 
-// // print binary of int
-// void printBinary(int l)
-// {
-//     for(int i = 31; i >= 0; --i)
-//     {
-//         std::cout << ((l >> i) & 1);
-//         if(i % 8 == 0 && i > 0)
-//             std::cout << " ";
-//     }
-// }
+// print binary of int
+void printBinary(int l)
+{
+    for(int i = 31; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i % 8 == 0 && i > 0)
+            std::cout << " ";
+    }
+}
+
+class foo
+{
+public:
+    int *a, *b;
+};
+
+void create_foo(foo* f)
+{
+    f = new foo();
+    f->a = new int[5];
+    f->b = new int[5];
+}
 
 int main(int argc, char** argv)
 {
-    std::cout << std::setprecision(15);
-    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    // std::cout << std::setprecision(16);
+    // std::cout.setf(std::ios::fixed, std::ios::floatfield);
+
+    foo* foo;
+    create_foo(foo);
+
+    foo->a[0] = 4;
+
+    printf("foo->a[0] = %d\n", foo->a[0]);
+
+    return 0;
 
     using fArray = TwoSegArray<false>;
     using tArray = TwoSegArray<true>;
@@ -69,23 +90,41 @@ int main(int argc, char** argv)
     // f.setPair(3, 45L);
     // f.setPair(4, true);
 
-    f[0] = 0.385729789733887;
+    f[0] = 0.11;
     f[1] = 1.4f;
     f[2] = 22;
     f[3] = 45L;
     f[4] = true;
     f[5] = 1.25e-308;
  
-    t[0] = f[0]; 
-    t[1] = f[1]; 
-    t[2] = f[2];
-    t[3] = f[3];
-    t[4] = f[4];
-    t[5] = f[5];
+    // t[0] = f[0]; 
+    // t[1] = f[1]; 
+    // t[2] = f[2];
+    // t[3] = f[3];
+    // t[4] = f[4];
+    // t[5] = f[5];
+    t[0] = 0.11;
+    t[1] = 1.4f;
+    t[2] = 22;
+    t[3] = 45L;
+    t[4] = true;
+    t[5] = 1.25e-308;
 
     for(int i = 0; i < size; ++i)
-        std::cout << i << ":f -> " << f[i] << "\t\tt -> " << t[i] << "\n";
+    {
+        double d = f[i];
+        std::cout << i << ": " << d << "\n";
+        printBinary(d);
+        std::cout << "\n";
+    }
     std::cout << "\n";
+    for(int i = 0; i < size; ++i)
+    {
+        double d = t[i];
+        std::cout << i << ": " << d << "\n";
+        printBinary(d);
+        std::cout << "\n";
+    }
 
     return 0;
 }
