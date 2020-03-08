@@ -6,10 +6,10 @@
 #include <string>
 #include <regex>
 
-#include "mantissaSegmentation.hpp"
+#include "../../../mantissaSegmentation.hpp"
 
 using namespace std;
-using namespace manseg;
+using namespace ManSeg;
 
 constexpr double d = 0.85;
 constexpr double tol = 1e-7;
