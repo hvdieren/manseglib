@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     printf("# nnz                  : %d\n", nz);
     printf("# matrix_norm          : %e\n", (double)norm);
     printf("# matrix_error         : %e\n", (double)max);
-    printf("# bnorm                : %e\n\n", (double)vector_norm2(n, b));
+    printf("# bnorm                : %e\n", (double)vector_norm2(n, b));
 
     // randomize guesses in x
     vector_rand(n, x);

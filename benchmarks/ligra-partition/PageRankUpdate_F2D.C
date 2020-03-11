@@ -255,7 +255,6 @@ void Compute(GraphType &GA, long start)
     loop(j, part, perNode, p_curr_d[j] = (double)p_curr_f[j]);
     loop(j, part, perNode, p_next_d[j] = (double)p_next_f[j]);
 
-    while(count<MaxIter)
     {
         // power method step (main page rank step)
         partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex, float, double>(p_curr_f,p_next_d,damping,WG.V),m/20);
@@ -281,6 +280,15 @@ void Compute(GraphType &GA, long start)
         Frontier = output;
     }
 
+    if(delta < epsilon)
+    {
+        Frontier.del();
+        p_curr_f.del();
+        p_next_f.del();
+        p_curr_d.del();
+        p_next_d.del();
+        return;
+    }
 
     // doubles
     while(count<MaxIter)

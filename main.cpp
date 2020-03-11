@@ -7,7 +7,9 @@
 #include <math.h>
 
 // #include "mantissaSegmentation.hpp"
-#include "mantissaSegmentation_f.hpp"
+#include "mantissaSegmentation_dev.hpp"
+#include "matrix.h"
+#include "vector.h"
 
 using namespace ManSeg;
 
@@ -49,32 +51,58 @@ void printBinary(int l)
     }
 }
 
-class foo
+int main(int argc, char** argv)
 {
-public:
-    int *a, *b;
-};
+    const int m_size = 4;
+    double x[m_size*m_size] = {
+        0.1, 0.1, 2.5, 1.5,
+        1.6, 0.2, 0.21, 0.71,
+        2.5, 1.34, 1.22, 1.88,
+        0.21, 0.11, 0.691, 2.
+    };
 
-void create_foo(foo* f)
-{
-    f = new foo();
-    f->a = new int[5];
-    f->b = new int[5];
+    matr_ m(m_size);
+    
+    m.fill(x);
+
+    double y[m_size] = {3.25, 3.1, 3.001, 3.77};
+    double z[m_size] = {2.03, 2.44, 2.98, 2.25};
+    
+    m.mm(y, z);
+
+    std::cout << "m = \n";
+
+    ManSegArray msa(m_size);
+    for(int i = 0; i < m_size; ++i)
+    {
+        for(int j = 0; j < m_size; ++j)
+        {
+            std::cout << m.v[i].pairs[j] << "  ";
+
+            msa.pairs[j] = m.v[i].pairs[j];
+        }
+        std::cout << '\n';
+    }
+
+    std::cout << "\nz=\n";
+    for(int i = 0; i < m_size; ++i)
+        std::cout << z[i] << "  ";
+    std::cout << '\n';
+
+    std::cout << "\nmsa.pairs=\n";
+    for(int i = 0; i < m_size; ++i)
+        std::cout << msa.pairs[i] << "  ";
+    std::cout << '\n';
+
+    std::cout << "prod of m= " << prod(&m, m_size) << '\n';
+
+    return 0;
 }
 
-int main(int argc, char** argv)
+int main3(int argc, char** argv)
 {
     // std::cout << std::setprecision(16);
     // std::cout.setf(std::ios::fixed, std::ios::floatfield);
-
-    foo* foo;
-    create_foo(foo);
-
-    foo->a[0] = 4;
-
-    printf("foo->a[0] = %d\n", foo->a[0]);
-
-    return 0;
 
     using fArray = TwoSegArray<false>;
     using tArray = TwoSegArray<true>;
