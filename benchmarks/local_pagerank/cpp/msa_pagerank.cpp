@@ -8,7 +8,7 @@
 #include <cmath>
 
 // #include "../../../mantissaSegmentation.hpp"
-#include "../../../mantissaSegmentation_f.hpp"
+#include "../../../mantissaSegmentation_dev.hpp"
 #include "quicksort.h"
 
 using namespace std;
@@ -60,27 +60,30 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr, double* acc)
     {
         int src, dest;
         for(int i = 0; i < numEdges; ++i)
         {
             src = source[i];
             dest = destination[i];
-            newPr[dest] += d*(prevPr[src]/outdeg[src]);
+            acc[dest] += d*(prevPr[src]/outdeg[src]);
         }
+
+        for(int i = 0; i < numEdges; ++i) newPr[i] = acc[i];
     }
 
-    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<true>& newPr, int outdeg[], double* contr, double* acc)
     {
         int src, dest;
         for(int i = 0; i < numEdges; ++i)
         {
             src = source[i];
             dest = destination[i];
-            double val = d*(prevPr[src]/outdeg[src]);
-            newPr.setPair(dest, (newPr[dest] + val));
+            acc[dest] += d*(prevPr[src]/outdeg[src]);
         }
+
+        for(int i = 0; i < numVertices; ++i) newPr[i] = acc[i];
     }
 
     int numVertices;
@@ -140,7 +143,24 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr, double* acc)
+    {
+        for(int i = 0; i < numVertices; ++i)
+            contr[i] = d*(prevPr[i]/outdeg[i]);
+
+        int curr, next;
+        for(int i = 0; i < numVertices; ++i)
+        {
+            curr = index[i];
+            next = index[i + 1];
+            for(int j = curr; j < next; ++j)
+                acc[dest[j]] += contr[i];
+        }
+
+        for(int i = 0; i < numVertices; ++i) newPr[i] = acc[i];
+    }
+
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<true>& newPr, int outdeg[], double* contr, double* acc)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -153,21 +173,8 @@ public:
             for(int j = curr; j < next; ++j)
                 newPr[dest[j]] += contr[i];
         }
-    }
 
-    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
-    {
-        for(int i = 0; i < numVertices; ++i)
-            contr[i] = d*(prevPr[i]/outdeg[i]);
-
-        int curr, next;
-        for(int i = 0; i < numVertices; ++i)
-        {
-            curr = index[i];
-            next = index[i + 1];
-            for(int j = curr; j < next; ++j)
-                newPr.setPair(dest[j], (newPr[dest[j]] + contr[i]));
-        }
+        for(int i = 0; i < numVertices; ++i) newPr[i] = acc[i];
     }
 
     int numVertices;
@@ -227,7 +234,7 @@ public:
     }
 
     template<class TwoSegArray>
-    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr)
+    void iterate(double d, TwoSegArray& prevPr, TwoSegArray& newPr, int outdeg[], double* contr, double* acc)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -238,11 +245,13 @@ public:
             curr = index[i];
             next = index[i + 1];
             for(int j = curr; j < next; ++j)
-                newPr[i] += contr[source[j]];
+                acc[i] += contr[source[j]];
         }
+
+        for(int i = 0; i < numVertices; ++i) newPr[i] = acc[i];
     }
 
-    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr)
+    void iterate_fullSet(double d, TwoSegArray<false>& prevPr, TwoSegArray<false>& newPr, int outdeg[], double* contr, double* acc)
     {
         for(int i = 0; i < numVertices; ++i)
             contr[i] = d*(prevPr[i]/outdeg[i]);
@@ -253,8 +262,9 @@ public:
             curr = index[i];
             next = index[i + 1];
             for(int j = curr; j < next; ++j)
-                newPr.setPair(i, (newPr[i] + contr[source[j]]));
+                acc[i] += contr[source[j]];
         }
+        for(int i = 0; i < numVertices; ++i) newPr[i] = acc[i];
     }
 
     int numVertices;
@@ -596,10 +606,9 @@ double normDiff(TwoSegArray& a, TwoSegArray& b, int& n)
 }
 
 template<class TwoSegArray>
-void scaleValues(TwoSegArray& a, double& w, int& n)
+inline void scaleValues(TwoSegArray& a, double& w, int& n)
 {
-    for(int i = 0; i < n; ++i)
-        a[i] += w;
+    for(int i = 0; i < n; ++i) a[i] += w;
 }
 
 template<class SparseMatrix>
@@ -612,10 +621,10 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
 
     int n = matrix->numVertices;
     ManSegArray x(n); // pagerank
-    // ManSegArray v(n); 
     ManSegArray y(n);
     int* outdeg = new int[n];
     double* contr = new double[n];
+    double* acc = new double[n];
 
     double delta = 2.0;
     int iter = 0;
@@ -638,7 +647,7 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     
     while(iter < maxIter && delta > AdaptivePrecisionBound) // use heads only
     {
-        matrix->iterate(d, x.heads, y.heads, outdeg, contr);
+        matrix->iterate(d, x.heads, y.heads, outdeg, contr, acc);
 
         double w = (1.0 - sum(y.heads, n))*oneOverN;
         scaleValues(y.heads, w, n);
@@ -649,7 +658,7 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
         for(int i = 0; i < n; ++i)
         {
             x.heads[i] = y.heads[i];
-            y.heads[i] = 0.0;
+            y.heads[i] = acc[i] = 0.0;
         }
 
         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
@@ -675,7 +684,7 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
            rounding towards zero. This, in turn, leads to ||p^k|| < 1
     */
     {
-        matrix->iterate_fullSet(d, x.heads, y.heads, outdeg, contr);
+        matrix->iterate_fullSet(d, x.heads, y.pairs, outdeg, contr, acc);
     
         double w = (1.0 - sum(y.pairs, n))*oneOverN;
         scaleValues(y.pairs, w, n);
@@ -686,11 +695,11 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
         for(int i = 0; i < n; ++i)
         {
             x.pairs[i] = y.pairs[i];
-            y.pairs[i] = 0.0;
+            y.pairs[i] = acc[i] = 0.0;
         }
 
         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;
-        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x.heads, n) 
+        cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x.pairs, n) 
             << " time=" << tmStep << " seconds" << endl;
         tmStart = chrono::high_resolution_clock::now();
     }
@@ -698,10 +707,9 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     cout << "\n=========================\nIncreased Precision\n=========================" << endl;
     while(iter < maxIter && delta > tol) // use full precision
     {
-        matrix->iterate(d, x.pairs, y.pairs, outdeg, contr);
+        matrix->iterate(d, x.pairs, y.pairs, outdeg, contr, acc);
 
         double w = (1.0 - sum(y.pairs, n))*oneOverN;
-
         scaleValues(y.pairs, w, n);
 
         delta = normDiff(x.pairs, y.pairs, n);
@@ -710,7 +718,7 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
         for(int i = 0; i < n; ++i)
         {
             x.pairs[i] = y.pairs[i];
-            y.pairs[i] = 0.0;
+            y.pairs[i] = acc[i] = 0.0;
         }
  
         auto tmStep = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - tmStart).count()*1e-9;

@@ -1,6 +1,6 @@
 
 CCX=g++
-CCXFLAGS=-O3 -std=c++11 -march=native
+CCXFLAGS=-O3 -std=c++11
 
 all: 
 	make pagerank pagerank_check msa_pagerank
@@ -22,7 +22,7 @@ pagerank_check.o: pagerank_check.cpp quicksort.h
 msa_pagerank: msa_pagerank.o
 	${CCX} -o msa_pagerank msa_pagerank.o
 
-msa_pagerank.o: msa_pagerank.cpp ../../../mantissaSegmentation.hpp ../../../mantissaSegmentation_f.hpp quicksort.h
+msa_pagerank.o: msa_pagerank.cpp ../../../mantissaSegmentation_dev.hpp quicksort.h
 	${CCX} ${CCXFLAGS} -c msa_pagerank.cpp
 
 .PHONY: clean

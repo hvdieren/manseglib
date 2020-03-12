@@ -600,6 +600,9 @@ namespace ManSeg
         */
         void del() { heads.del(); }
     };
+
+    using HeadsArray = TwoSegArray<false>;
+    using PairsArray = TwoSegArray<true>;
 }
 
 #endif

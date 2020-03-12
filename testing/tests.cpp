@@ -7,7 +7,7 @@
 #include <math.h>
 
 // #include "../mantissaSegmentation.hpp"
-#include "../mantissaSegmentation_f.hpp"
+#include "../mantissaSegmentation_dev.hpp"
 
 using namespace ManSeg;
 
@@ -219,77 +219,144 @@ void test3()
 }
 
 // helper function for test4
-void fill(double* d, TwoSegArray<true>& y, int* v, const int& size)
+void fill(double* d, double* dy, TwoSegArray<false>& x, TwoSegArray<false>& xy, 
+    TwoSegArray<true>& y, TwoSegArray<true>& yy, int* v, const int& size)
 {
     for(int i = 0; i < size; ++i)
     {
-        y[i] = (i+1)/0.1;
-        d[i] = (i+1)/0.1;
         v[i] = (i+1);
+
+        x[i] = (double)(i+1)/0.1;
+        xy[i] = 0.0;
+
+        y[i] = (double)(i+1)/0.1;
+        yy[i] = 0.0;
+        
+        d[i] = (double)(i+1)/0.1;
+        dy[i] = 0.0;        
     }
 }
-constexpr int size = 50000;
+
+constexpr int size = 64000;
 constexpr double val = 0.85;
 // tried to replicate what pagerank was doing
 // in a small tester function for micro benchmarking
 // not exactly the same, but somewhat close.
-void test4(bool usePairs)
+void test4_double_ver(double* d, double* dy, int* v)
 {
-    TwoSegArray<false> x(size);                                 // x = heads
-    TwoSegArray<true> y = x.createFullPrecision();            // y = pairs
-
-    int* v = new int[size];
-    double* d = new double[size];
-
-    fill(d, y, v, size);
-
-    // standard doubles
     auto dst = std::chrono::_V2::high_resolution_clock::now();
 
     for(int i = 0; i < size; ++i)
         for(int j = 0; j < size; ++j)
-            d[i] += val*(d[size-1-j]/v[j]);
+            dy[i] += val*(d[size-1-j]/v[j]);
 
     auto ded = std::chrono::_V2::high_resolution_clock::now();
     auto dt = std::chrono::duration_cast<std::chrono::nanoseconds>(ded - dst).count()*1e-9;
 
+    std::cout << "std double = " << dt << "s\n";
+}
+void test4_heads_ver(TwoSegArray<false>& x, TwoSegArray<false>& xy, int* v)
+{
+    auto mxst = std::chrono::_V2::high_resolution_clock::now();
 
-    // using manseg
-    if(!usePairs)
+    for(int i = 0; i < size; ++i)
     {
-        auto mxst = std::chrono::_V2::high_resolution_clock::now();
-
-        for(int i = 0; i < size; ++i)
-            for(int j = 0; j < size; ++j)
-                x[i] += val*(x[size-1-j]/v[j]);
-
-        auto mxed = std::chrono::_V2::high_resolution_clock::now();
-        auto mt = std::chrono::duration_cast<std::chrono::nanoseconds>(mxed - mxst).count()*1e-9;
-
-        std::cout << "std double time = " << dt << "s\n"
-        << "heads time = " << mt << "s\n";
-    }
-    else
-    {
-        auto mxst = std::chrono::_V2::high_resolution_clock::now();
-
-        for(int i = 0; i < size; ++i)
-            for(int j = 0; j < size; ++j)
-                y[i] += val*(y[size-1-j]/v[j]);
-
-        auto mxed = std::chrono::_V2::high_resolution_clock::now();
-        auto mt = std::chrono::duration_cast<std::chrono::nanoseconds>(mxed - mxst).count()*1e-9;
-
-        std::cout << "std double time = " << dt << "s\n"
-        << "pairs time = " << mt << "s\n";
+        for(int j = 0; j < size; ++j) xy[i] += val*(x[size-1-j]/v[j]);
     }
 
-    delete[] v, d;
-    y.del();
+    auto mxed = std::chrono::_V2::high_resolution_clock::now();
+    auto mt = std::chrono::duration_cast<std::chrono::nanoseconds>(mxed - mxst).count()*1e-9;
+
+    std::cout  << "heads = " << mt << "s\n";
+}
+void test4_pairs_ver(TwoSegArray<true>& y, TwoSegArray<true>& yy, int* v)
+{
+    auto mxst = std::chrono::_V2::high_resolution_clock::now();
+
+    for(int i = 0; i < size; ++i)
+    {
+        for(int j = 0; j < size; ++j) yy[i] += val*(y[size-1-j]/v[j]);
+    }
+
+    auto mxed = std::chrono::_V2::high_resolution_clock::now();
+    auto mt = std::chrono::duration_cast<std::chrono::nanoseconds>(mxed - mxst).count()*1e-9;
+
+    std::cout  << "pairs = " << mt << "s\n";
+}
+void test4_head_acc_ver(TwoSegArray<false>& x, TwoSegArray<false>& xy, int* v)
+{
+    auto mxst = std::chrono::_V2::high_resolution_clock::now();
+
+    double* acc = new double[size];
+    for(int i = 0; i < size; ++i)
+    {
+        for(int j = 0; j < size; ++j) acc[i] += val*(x[size-1-j]/v[j]);
+
+        xy[i] = acc[i];
+    }
+    delete[] acc;
+
+    auto mxed = std::chrono::_V2::high_resolution_clock::now();
+    auto mt = std::chrono::duration_cast<std::chrono::nanoseconds>(mxed - mxst).count()*1e-9;
+
+    std::cout  << "heads w/acc = " << mt << "s\n";
+}
+void test4_pairs_acc_ver(TwoSegArray<true>& y, TwoSegArray<true>& yy, int* v)
+{
+    auto mxst = std::chrono::_V2::high_resolution_clock::now();
+
+    double* acc = new double[size];
+    for(int i = 0; i < size; ++i)
+    {
+        for(int j = 0; j < size; ++j) acc[i] += val*(y[size-1-j]/v[j]);
+
+        yy[i] = acc[i];
+    }
+    delete[] acc;
+
+    auto mxed = std::chrono::_V2::high_resolution_clock::now();
+    auto mt = std::chrono::duration_cast<std::chrono::nanoseconds>(mxed - mxst).count()*1e-9;
+
+    std::cout  << "pairs w/acc = " << mt << "s\n";
+}
+void test4()
+{
+    TwoSegArray<false> x(size), xy(size);       // x = heads
+    TwoSegArray<true> y(size), yy(size);        // y = pairs
+
+    int* v = new int[size];
+    double* d = new double[size];
+    double* dy = new double[size];
+
+    // fill arrays initially
+    std::cout << "round 1 - read and write to manseg \n";
+    fill(d, dy, x, xy, y, yy, v, size);
+
+    // doubles
+    test4_double_ver(d, dy, v);
+    // heads
+    test4_heads_ver(x, xy, v);
+    // pairs
+    test4_pairs_ver(y, yy, v);
+
+    std::cout << "round 2 - read from manseg, write to double acc \n";
+    // reset
+    fill(d, dy, x, xy, y, yy, v, size);
+
+    // doubles
+    test4_double_ver(d, dy, v);
+    // heads w acc
+    test4_head_acc_ver(x, xy, v);
+    // pairs w acc
+    test4_pairs_acc_ver(y, yy, v);
+
+    delete[] d, dy, v;
+    x.del(); xy.del();
+    y.del(); yy.del();
 }
 
 // reading SNAP file format test
-void test5()
+void testSNAP()
 {
     using std::ifstream;
     using std::cout;
@@ -327,7 +394,7 @@ void test5()
 
 // helper for test6 & test7
 template<class TwoSegArray>
-void t6Helper(TwoSegArray* ms, int size, int repeats)
+void t5Helper(TwoSegArray* ms, int size, int repeats)
 {
     srand((unsigned int)(time(NULL)));
     for(int i = 0; i < repeats; ++i)
@@ -335,12 +402,12 @@ void t6Helper(TwoSegArray* ms, int size, int repeats)
         for(int j = 0; j < size; ++j)
         {
             double val = (static_cast<double>(rand()) / RAND_MAX);
-            (*ms)[j] = val;
+            (*ms)[(int)(rand()/size)] = val;
         }
     }
 }
 template<class TwoSegArray>
-void t6Helper_v2(TwoSegArray* ms, int size, int repeats)
+void t5Helper_v2(TwoSegArray* ms, int size, int repeats)
 {
     srand((unsigned int)(time(NULL)));
     for(int i = 0; i < repeats; ++i)
@@ -348,11 +415,11 @@ void t6Helper_v2(TwoSegArray* ms, int size, int repeats)
         for(int j = 0; j < size; ++j)
         {
             double val = (static_cast<double>(rand()) / RAND_MAX);
-            ms->set(j, val);
+            ms->set((int)(rand()/size), val);
         }
     }
 }
-void t6Helper2(double* d, int size, int repeats)
+void t5Helper2(double* d, int size, int repeats)
 {
     srand((unsigned int)(time(NULL)));
     for(int i = 0; i < repeats; ++i)
@@ -360,12 +427,12 @@ void t6Helper2(double* d, int size, int repeats)
         for(int j = 0; j < size; ++j)
         {
             double val = (static_cast<double>(rand()) / RAND_MAX);
-            d[j] = val;
+            d[(int)(rand()/size)] = val;
         }
     }
 }
 // benchmark writing
-void test6()
+void test5()
 {
     const int size = 1000000;
     const int repetitions = 1000;
@@ -374,23 +441,23 @@ void test6()
     double* d = new double[size];
 
     auto d_start = std::chrono::_V2::high_resolution_clock::now();
-    t6Helper2(d, size, repetitions);
+    t5Helper2(d, size, repetitions);
     auto d_end = std::chrono::_V2::high_resolution_clock::now();
 
     auto f_start = std::chrono::_V2::high_resolution_clock::now();
-    t6Helper(f, size, repetitions);
+    t5Helper(f, size, repetitions);
     auto f_end = std::chrono::_V2::high_resolution_clock::now();
 
     auto f_startv2 = std::chrono::_V2::high_resolution_clock::now();
-    t6Helper_v2(f, size, repetitions);
+    t5Helper_v2(f, size, repetitions);
     auto f_endv2 = std::chrono::_V2::high_resolution_clock::now();
 
     auto p_start = std::chrono::_V2::high_resolution_clock::now();
-    t6Helper(t, size, repetitions);
+    t5Helper(t, size, repetitions);
     auto p_end = std::chrono::_V2::high_resolution_clock::now();
 
     auto p_startv2 = std::chrono::_V2::high_resolution_clock::now();
-    t6Helper_v2(t, size, repetitions);
+    t5Helper_v2(t, size, repetitions);
     auto p_endv2 = std::chrono::_V2::high_resolution_clock::now();
 
 
@@ -409,89 +476,83 @@ void test6()
 
 // benchmark reading
 template<class TwoSegArray>
-double t7Helper(TwoSegArray* ms, int size, int repetitions)
+double t6Helper(TwoSegArray* ms, int size, int repetitions)
 {
+    srand((unsigned int)(time(NULL)));
     double t = 0.0;
     for(int i = 0; i < repetitions; ++i)
     {
         for(int j = 0; j < size; ++j)
         {
-            t += (*ms)[j];
+            t += (*ms)[(int)(rand()/size)];
         }
     }
     return t;
 }
 template<class TwoSegArray>
-double t7Helper_v2(TwoSegArray* ms, int size, int repetitions)
+double t6Helper_v2(TwoSegArray* ms, int size, int repetitions)
 {
+    srand((unsigned int)(time(NULL)));
     double t = 0.0;
     for(int i = 0; i < repetitions; ++i)
     {
         for(int j = 0; j < size; ++j)
         {
-            t += ms->read(j);
+            t += ms->read((int)(rand()/size));
         }
     }
     return t;
 }
-double t7Helper2(double* d, int size, int repetitions)
+double t6Helper2(double* d, int size, int repetitions)
 {
+    srand((unsigned int)(time(NULL)));
     double t = 0.0;
     for(int i = 0; i < repetitions; ++i)
     {
         for(int j = 0; j < size; ++j)
         {
-            t += d[j];
+            t += d[(int)(rand()/size)];
         }
     }
     return t;
 }
-void test7()
+void test6()
 {
     const int size = 1000000;
-    const int repetitions = 1000;
+    const int repetitions = 2000;
     TwoSegArray<false>* f = new TwoSegArray<false>(size);
     TwoSegArray<true>* t = new TwoSegArray<true>(size);
     double* d = new double[size];
 
 
-    t6Helper2(d, size, 1);
-    t6Helper(f, size, 1);
-    t6Helper(t, size, 1);
+    t5Helper2(d, size, 1);
+    t5Helper(f, size, 1);
+    t5Helper(t, size, 1);
 
     auto f_start = std::chrono::_V2::high_resolution_clock::now();
-    double ftotal = t7Helper(f, size, repetitions);
+    double ftotal = t6Helper(f, size, repetitions);
     // double ftotal = t7Helper_v2(f, size, repetitions);
     auto f_end = std::chrono::_V2::high_resolution_clock::now();
 
     auto p_start = std::chrono::_V2::high_resolution_clock::now();
-    double ptotal = t7Helper(t, size, repetitions);
+    double ptotal = t6Helper(t, size, repetitions);
     // double ptotal = t7Helper_v2(t, size, repetitions);
     auto p_end = std::chrono::_V2::high_resolution_clock::now();
 
     auto d_start = std::chrono::_V2::high_resolution_clock::now();
-    double dtotal = t7Helper2(d, size, repetitions);
+    double dtotal = t6Helper2(d, size, repetitions);
     auto d_end = std::chrono::_V2::high_resolution_clock::now();
 
 
     auto d_time = std::chrono::duration_cast<std::chrono::nanoseconds>(d_end - d_start).count()*1e-9;
     auto f_time = std::chrono::duration_cast<std::chrono::nanoseconds>(f_end - f_start).count()*1e-9;
     auto p_time = std::chrono::duration_cast<std::chrono::nanoseconds>(p_end - p_start).count()*1e-9;
-    // auto f_timev2 = std::chrono::duration_cast<std::chrono::nanoseconds>(f_endv2 - f_startv2).count()*1e-9;
-    // auto p_timev2 = std::chrono::duration_cast<std::chrono::nanoseconds>(p_endv2 - p_startv2).count()*1e-9;
-
 
     std::cout << "std double: " << d_time << "s\nheads only: " << f_time << "s\npairs:       " << p_time << "s\ntotals" << std::endl;
     std::cout << "std double: " << dtotal << "\nheads only: " << ftotal << "\npairs:       " << ptotal << std::endl;
-    // std::cout << "\nheadsv2 only: " << f_timev2 << "s\npairs:       " << p_timev2 << "s" << std::endl;
 
     delete[] d, f, t;
 }
-
-// todo: replace with memcpy and whatever
-// see if that provides some form of performance improvement
-
-// spoiler: it does not.
 
 int main(int argc, char** argv)
 {
@@ -528,20 +589,16 @@ int main(int argc, char** argv)
         test3(); // .set/setPair functions / construction/deconstruction
         break;
     case 4:
-        std::cout << "nano benchmark that emulates pagerank, sort of, kind of (heads only)" << std::endl;
-        test4(false); // checking to other assignment works correctly (i.e. x[i] += 2 and such)
+        std::cout << "nano benchmark that emulates pagerank, sort of, kind of" << std::endl;
+        test4(); // test basic math potential in a few ways
         break;
     case 5:
-        std::cout << "nano benchmark that emulates pagerank, sort of, kind of (using pairs)" << std::endl;
-        test4(true);
+        std::cout << "pico benchmark for pseudo-random writes" << std::endl;
+        test5();
         break;
     case 6:
-        std::cout << "pico benchmark for sequential writes only" << std::endl;
-        test6(); // write tests
-        break;
-    case 7:
-        std::cout << "pico benchmark for sequential reads only" << std::endl;
-        test7(); // read tests
+        std::cout << "pico benchmark for pseudo-random reads" << std::endl;
+        test6(); // read tests
         break;
     default:
         test1();
@@ -550,23 +607,13 @@ int main(int argc, char** argv)
         std::cout << "\n";
         test3();
         std::cout << "\n";
-        test4(false); // use heads only
+        test4(); // use heads only
         std::cout << "\n";
-        test4(true); // use pairs
+        test5();
         std::cout << "\n";
         test6();
-        std::cout << "\n";
-        test7();
         std::cout << "\n";
     };
 
     return 0;
 }
-
-// TODO:
-// Can probably rename TwoSegArray to TwoSegArray since there is no encapsuling thing anymore
-// unless you want the wrapper thing you'd talked about which holds refs to low and high precision or whatever
-// but that might not be so good if multiple precisions in future or whatever
-
-// I think this still applies, but with pointer version of TwoSegArray
-// dynamic version of TwoSegArray still doesn't like [] operator (need to wrap in *() to use)

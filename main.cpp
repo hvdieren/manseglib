@@ -13,45 +13,8 @@
 
 using namespace ManSeg;
 
-// print binary of double
-void printBinary(double d)
-{
-    unsigned long l = *reinterpret_cast<unsigned long*>(&d);
-    for(int i = 63; i >= 0; --i)
-    {
-        std::cout << ((l >> i) & 1);
-        if(i == 63 || i == 52)
-            std::cout << " ";
-        else if(i == 32)
-            std::cout << "|";
-    }
-}
 
-// print binary of float
-void printBinary(float f)
-{
-    unsigned int l = *reinterpret_cast<unsigned int*>(&f);
-    for(int i = 31; i >= 0; --i)
-    {
-        std::cout << ((l >> i) & 1);
-        if(i == 31 || i == 23)
-            std::cout << " ";
-    }
-    std::cout << std::endl;
-}
-
-// print binary of int
-void printBinary(int l)
-{
-    for(int i = 31; i >= 0; --i)
-    {
-        std::cout << ((l >> i) & 1);
-        if(i % 8 == 0 && i > 0)
-            std::cout << " ";
-    }
-}
-
-int main(int argc, char** argv)
+int main5(int argc, char** argv)
 {
     const int m_size = 4;
     double x[m_size*m_size] = {
@@ -99,18 +62,37 @@ int main(int argc, char** argv)
     return 0;
 }
 
-int main3(int argc, char** argv)
+int main()
+{
+    HeadsArray h1(5);
+    HeadsArray h2(5);
+
+    h1[0] = 0.11;
+    h1[1] = 1.4f;
+    h1[2] = 22;
+    h1[3] = 45L;
+    h1[4] = true;
+
+    h2[0] = h1[0];
+    h2[1] = h1[1];
+    h2[2] = h1[2];
+    h2[3] = h1[3];
+    h2[4] = h1[4];
+
+    for(int i = 0; i < 5; ++i)
+        printf("%d: %.15f\t|   %.15f\n", i, (double)h1[i], (double)h2[i]);
+
+    return 0;
+}
+
+int main01(int argc, char** argv)
 {
     // std::cout << std::setprecision(16);
     // std::cout.setf(std::ios::fixed, std::ios::floatfield);
-
-    using fArray = TwoSegArray<false>;
-    using tArray = TwoSegArray<true>;
-
     const int size = 6;
 
-    fArray f(size);
-    tArray t(size);
+    TwoSegArray<false> f(size);
+    TwoSegArray<true> t(size);
 
     // f.setPair(0, 0.1);
     // f.setPair(1, 1.4f);
@@ -142,7 +124,7 @@ int main3(int argc, char** argv)
     {
         double d = f[i];
         std::cout << i << ": " << d << "\n";
-        printBinary(d);
+        // printBinary(d);
         std::cout << "\n";
     }
     std::cout << "\n";
@@ -150,9 +132,12 @@ int main3(int argc, char** argv)
     {
         double d = t[i];
         std::cout << i << ": " << d << "\n";
-        printBinary(d);
+        // printBinary(d);
         std::cout << "\n";
     }
+
+    f.del();
+    t.del();
 
     return 0;
 }
