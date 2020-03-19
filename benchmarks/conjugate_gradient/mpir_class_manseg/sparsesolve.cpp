@@ -15,44 +15,10 @@
 #include "vector.h"
 #include "matrix.h"
 
-// would like to include it here, but probably can't
-#include "../../../mantissaSegmentation.hpp"
-
-using namespace ManSeg;
-using HeadsArray = TwoSegArray<false>;
-using PairsArray = TwoSegArray<true>;
-
 // #define USE_DENSE
 #define USE_PRECOND
-/*
-    To do (probably)
 
-    smaller changes:            [ ideally you want to have done by thursday ]
-    - change things that are head/pair arrays to be ManSeg arrays
-      this would let you choose which precision to use for whatever
-      operations
-    - figure out what precision to use for things
-      -> this is something you need to ask or find out about
-         but is probably going to be something you do in high precision
-         (read full, probably still use double as underlying type)
-    
-    bigger changes:             [ probably postponed until you either figure out what ir+cg does or are explained how it works ]
-    - implement the type of precision switching that
-      have used in other things - start in heads, move to pairs after
-      we hit the limit
-      -> issues with this:
-        - don't super understand the error/residual calculations
-
-    what i'm calling less important but is not necessarily less important:
-    - inclusion issues: having multiple files that include each other and
-      also include the library will mean things cannot compile.
-      -> possible solutions:
-        - move definition of "complained about" functions to manseg.tpp (or something) file
-          and keep declaration in .hpp file
-        - make everything inline
-*/
-
-void iterative_refinement(int n, matrix *A, matrix *M, PairsArray *b, PairsArray *x, int out_maxiter, DOUBLE out_tol, 
+void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int out_maxiter, DOUBLE out_tol, 
     int in_maxiter, DOUBLE in_tol, int step_check, int *out_iter, int *in_iter);
 
 int main(int argc, char *argv[])
@@ -74,14 +40,10 @@ int main(int argc, char *argv[])
     matrix *A = csr_create(n, nz, coo);
 #endif
 
-    // DOUBLE *x = ALLOC(DOUBLE, n); // unknown vector x (what we want to find)
-    // DOUBLE *b = ALLOC(DOUBLE, n); // well-known vector
-    // DOUBLE *r = ALLOC(DOUBLE, n); // residual vector
-    // DOUBLE *s = ALLOC(DOUBLE, n); // randomised starting point (i think)
-    PairsArray *x = new PairsArray(n);
-    PairsArray *b = new PairsArray(n);
-    PairsArray *r = new PairsArray(n);
-    PairsArray *s = new PairsArray(n);
+    DOUBLE *x = ALLOC(DOUBLE, n); // unknown vector x (what we want to find)
+    DOUBLE *b = ALLOC(DOUBLE, n); // well-known vector
+    DOUBLE *r = ALLOC(DOUBLE, n); // residual vector
+    DOUBLE *s = ALLOC(DOUBLE, n); // randomised starting point (i think)
 
     vector_rand(n, s); // randomise "starting point"
     // vector_set(n, 1.0 / sqrt(n), s);
@@ -102,7 +64,7 @@ int main(int argc, char *argv[])
     DOUBLE max = 0;
     for (int i = 0; i < nz; i++) // max error present in matrix
     {
-        DOUBLE x1 = coo->a->pairs[i];
+        DOUBLE x1 = coo[i].a;
         DOUBLE x2 = x1;
         DOUBLE error = (x1 - x2) / x1;
         if (error > max)
@@ -166,7 +128,7 @@ int main(int argc, char *argv[])
     printf("# residual (ir)        : %e\n", (double)residual);
     printf("# normalized_residual  : %e\n", (double)normalized_residual);
 
-    printf("\n# Time taken           : %e s\n", time_taken);
+    printf("\n# Time taken           : %.7f s\n", time_taken);
 
     return 0;
 }

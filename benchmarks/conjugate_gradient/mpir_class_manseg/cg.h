@@ -13,16 +13,7 @@
 #define FLOAT2 DOUBLE
 #endif
 
-#ifndef MANSEG_LIB
-#define MANSEG_LIB
 #include "../../../mantissaSegmentation.hpp"
-
-using HeadsArray = ManSeg::TwoSegArray<false>;
-using PairsArray = ManSeg::TwoSegArray<true>;
-
-using namespace ManSeg;
-
-#endif
 
 #define ALLOC(t, l) (t*)malloc((l) * sizeof(t))
 #define CALLOC(t, l) (t*)calloc(sizeof(t),(l))

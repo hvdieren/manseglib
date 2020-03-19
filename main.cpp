@@ -7,6 +7,7 @@
 #include <math.h>
 
 // #include "mantissaSegmentation.hpp"
+// #include "mantissaSegmentation_f.hpp"
 #include "mantissaSegmentation_dev.hpp"
 #include "matrix.h"
 #include "vector.h"
@@ -62,7 +63,61 @@ int main5(int argc, char** argv)
     return 0;
 }
 
+template<class TwoSegArray>
+double sum(TwoSegArray& t, int n)
+{
+    double sum = 0.0;
+    for(int i = 0; i < n; ++i)
+    {
+        sum += t[i];
+    }
+    return sum;
+}
+double sum(double* t, int n)
+{
+    double sum = 0.0;
+    for(int i = 0; i < n; ++i)
+    {
+        sum += t[i];
+    }
+    return sum;
+}
+
 int main()
+{
+    const int size = 10;
+    ManSegArray a(size);
+
+    std::cout << "heads\n";
+    // heads only
+    for(int i = 0; i < size; ++i)
+    {
+        a.heads[i] = (i + 1);// * 0.2;
+        std::cout << a.heads[i] << " ";
+    }
+    // interim
+    std::cout << "\ndoing interim assignments\n";
+    for(int i = 0; i < size; ++i)
+    {
+        a.pairs[i] = a.heads[i] + 0.1; //(a.heads[i] * 1.25);
+    }
+    std::cout << "sum (heads)=" << sum<HeadsArray>(a.heads, size) << "\n";
+    std::cout << "sum (pairs)=" << sum<PairsArray>(a.pairs, size) << "\n";
+    // copy values
+    a.precisionSwitch();
+    std::cout << "sum (full)=" << sum(a.full, size) << "\n";
+    // use full
+    std::cout << "regular doubles\n";
+    for(int i = 0; i < size; ++i)
+    {
+        std::cout << a.full[i] << " ";
+    }
+    std::cout << std::endl;
+
+    return 0;
+}
+
+int main_55()
 {
     HeadsArray h1(5);
     HeadsArray h2(5);
@@ -72,15 +127,49 @@ int main()
     h1[2] = 22;
     h1[3] = 45L;
     h1[4] = true;
-
+    std::cout << "doing assignments now\n";
     h2[0] = h1[0];
     h2[1] = h1[1];
     h2[2] = h1[2];
     h2[3] = h1[3];
     h2[4] = h1[4];
+    std::cout << "pairs time\n";
+    PairsArray p1(5);
+    PairsArray p2(5);
 
+    p1[0] = 0.11;
+    p1[1] = 1.4f;
+    p1[2] = 22;
+    p1[3] = 45L;
+    p1[4] = true;
+    std::cout << "doing assignments now\n";
+    p2[0] = p1[0];
+    p2[1] = p1[1];
+    p2[2] = p1[2];
+    p2[3] = p1[3];
+    p2[4] = p1[4];
+
+    
+    printf("heads\n");
     for(int i = 0; i < 5; ++i)
-        printf("%d: %.15f\t|   %.15f\n", i, (double)h1[i], (double)h2[i]);
+    {
+        printf(" %.2f = ", (double)h1[i]);
+        printBinary((double)h1[i]);
+        printf(" %.2f = ", (double)h2[i]);
+        printBinary((double)h2[i]);
+        printf("\n");
+    }
+    printf("\n");
+
+    printf("pairs\n");
+    for(int i = 0; i < 5; ++i)
+    {
+        printf(" %.2f = ", (double)p1[i]);
+        printBinary((double)p1[i]);
+        printf(" %.2f = ", (double)p2[i]);
+        printBinary((double)p2[i]);
+        printf("\n");
+    }
 
     return 0;
 }

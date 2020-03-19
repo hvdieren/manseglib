@@ -32,12 +32,12 @@
 #include <time.h>
 #include <algorithm>
 #include <cmath>
-#include "../../mantissaSegmentation.hpp"
+#include "../../mantissaSegmentation_dev.hpp"
 
 using namespace ManSeg;
 
-#define NB 128
-#define B 32
+#define NB 512
+#define B 8
 #define FALSE (0)
 #define TRUE (1)
 
@@ -184,13 +184,12 @@ void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo,
             right = (j == B - 1 ? righthalo[i] : A.pairs[i * B + j + 1]);
             bottom = (i == B - 1 ? bottomhalo[i] : A.pairs[(i + 1) * B + j]);
 
-            // A_new.pairs[i * B + j] = 0.2 * (A.pairs[i * B + j] + left + top + right + bottom);
+            fp_type deltaTmp = blockDelta;
             fullResult = 0.2 * (A.pairs[i * B + j] + left + top + right + bottom);
             A_new.pairs[i * B + j] = fullResult;
 
             // record difference between full result and stored value
             // blockDelta += std::fabs(fullResult - A_new.pairs[i * B + j])
-            fp_type deltaTmp = blockDelta;
             fp_type y = std::fabs(fullResult - A_new.pairs[i * B + j]) + deltaErr;
             
             blockDelta = deltaTmp + y;
@@ -218,8 +217,6 @@ void jacobi<Precision::HEADS>(vin lefthalo, vin tophalo, vin righthalo, vin bott
             right = (j == B - 1 ? righthalo[i] : A.heads[i * B + j + 1]);
             bottom = (i == B - 1 ? bottomhalo[i] : A.heads[(i + 1) * B + j]);
 
-            // A_new.pairs[i * B + j] = 0.2 * (A.pairs[i * B + j] + left + top + right + bottom);
-            
             fullResult = 0.2 * (A.heads[i * B + j] + left + top + right + bottom);
             A_new.heads[i * B + j] = fullResult;
 
@@ -280,7 +277,15 @@ void compute(int niters)
             } // ii
         } // end parallel
 
-        std::swap(A, A_new);
+        // std::swap(A, A_new);
+
+        // copy instead of swap..
+        // using pairs is slow, so we want to avoid using if we don't need to.
+        for(int i = 0; i < NB; ++i)
+            for(int j = 0; j < NB; ++j)     // for these inner two loops we could split out into a separate funciton
+                for(int k = 0; k < B; ++k)  // if blockDelta[i][j] > MaxSingle, then do pairs (or full) 
+                    for(int l = 0; l < B; ++l)
+                        A[i][j].pairs[k * B + l] = A_new[i][j].pairs[k * B + l];
     } // iter
 }
 

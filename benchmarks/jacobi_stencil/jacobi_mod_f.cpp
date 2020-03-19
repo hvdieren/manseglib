@@ -276,7 +276,12 @@ void compute(int niters)
             } // jj
         } // ii
 
-        std::swap(A, A_new);
+        // std::copy(A, A_new);
+        for(int i = 0; i < NB; ++i)
+            for(int j = 0; j < NB; ++j)     // for these inner two loops we could split out into a separate funciton
+                for(int k = 0; k < B; ++k)  // if blockDelta[i][j] > MaxSingle, then do pairs (or full) 
+                    for(int l = 0; l < B; ++l)
+                        A[i][j].pairs[k * B + l] = A_new[i][j].pairs[k * B + l];
     } // iter
 }
 

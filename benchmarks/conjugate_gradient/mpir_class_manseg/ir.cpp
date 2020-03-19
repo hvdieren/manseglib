@@ -9,17 +9,14 @@
 #include "vector.h"
 #include "matrix.h"
 
-void conjugate_gradient(int n, matrix *A, matrix *M, HeadsArray *b, HeadsArray *x, int maxiter, FLOAT umbral, int step_check, int *in_iter);
+void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int maxiter, FLOAT umbral, int step_check, int *in_iter);
 
-void iterative_refinement(int n, matrix *A, matrix *M, PairsArray *b, PairsArray *x, int out_maxiter, DOUBLE out_tol, 
+void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int out_maxiter, DOUBLE out_tol, 
     int in_maxiter, DOUBLE in_tol, int step_check, int *out_iter, int *in_iter)
 {
-    // DOUBLE *e = ALLOC(DOUBLE, n);
-    // FLOAT *r = ALLOC(FLOAT, n);
-    // FLOAT *d = ALLOC(FLOAT, n);
-    PairsArray *e = new PairsArray(n);
-    HeadsArray *r = new HeadsArray(n);
-    HeadsArray *d = new HeadsArray(n);
+    DOUBLE *e = ALLOC(DOUBLE, n);
+    FLOAT *r = ALLOC(FLOAT, n);
+    FLOAT *d = ALLOC(FLOAT, n);
 
     mixed_copy(n, x, d); // d = (float)x
     vector_set(n, 0.0, x);
@@ -46,8 +43,7 @@ void iterative_refinement(int n, matrix *A, matrix *M, PairsArray *b, PairsArray
     if (residual <= out_tol)
         printf("\n==== residual less than out_tol ====\n");
 
-    // FREE(e);
-    // FREE(r);
-    // FREE(d);
-    delete e, r, d;
+    FREE(e);
+    FREE(r);
+    FREE(d);
 }

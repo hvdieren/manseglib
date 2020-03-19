@@ -1,6 +1,6 @@
 
 CCX=g++
-CCXFLAGS=-O3 -std=c++17 -march=native
+CCXFLAGS=-O3 -std=c++17 -mavx2
 
 all: 
 	make main

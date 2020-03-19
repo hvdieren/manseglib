@@ -11,36 +11,15 @@
 #include "cg.h"
 #include "matrix.h"
 
-int partition_coo(matrix_coo *coo, int lo, int hi)
+static int compar(const void *pa, const void *pb)
 {
-    int pivot = coo->i[(hi + lo)/2];
-    int i = lo - 1;
-    int j = hi + 1;
-
-    while(true)
-    {
-        while(coo->i[++i] < pivot);
-        while(coo->i[--j] > pivot);
-        if(i >= j)
-            return j;
-        std::swap(coo->i[i], coo->i[j]);
-        std::swap(coo->j[i], coo->j[j]);
-
-        // std::swap(coo->a[i], coo->a[j]);
-        double temp = coo->a->pairs[j];
-        coo->a->pairs[j] = coo->a->pairs[i];
-        coo->a->pairs[i] = temp;
-    }
-}
-
-void quicksort_coo(matrix_coo *coo, int lo, int hi)
-{
-    if(lo < hi)
-    {
-        int p = partition_coo(coo, lo, hi);
-        quicksort_coo(coo, lo, p);
-        quicksort_coo(coo, (p + 1), hi);
-    }
+    matrix_coo *a = (matrix_coo*)pa;
+    matrix_coo *b = (matrix_coo*)pb;
+    if (a->i < b->i) return -1;
+    if (a->i > b->i) return 1;
+    if (a->j < b->j) return -1;
+    if (a->j > b->j) return 1;
+    return 0;
 }
 
 matrix_coo* coo_load(const char *fname, int *n, int *nz)
@@ -69,35 +48,35 @@ matrix_coo* coo_load(const char *fname, int *n, int *nz)
         fprintf(stderr, "Matrix is not square\n");
         exit(1);
     }
-
-    matrix_coo* coo = new matrix_coo();
-    coo->i = new int[2*NZ] ();
-    coo->j = new int[2*NZ] ();
-    // coo->a = new double[2*NZ] ();
-    coo->a = new ManSegArray(2*NZ);
+    matrix_coo *coo = ALLOC(matrix_coo, 2 * NZ);
 
     int k = 0;
     for (int l = 0; l < NZ; l++) {
         double real;
-        if (mm_read_mtx_crd_entry(f, &coo->i[k], &coo->j[k], &real, NULL, matcode) != 0) {
+        if (mm_read_mtx_crd_entry(f, &coo[k].i, &coo[k].j, &real, NULL, matcode) != 0) {
             fprintf(stderr, "Error reading matrix element %i\n", l);
             exit(1);
         }
-        coo->i[k]--;
-        coo->j[k]--;
-        coo->a->pairs[k] = real;
-        if (coo->i[k] == coo->j[k]) k++;
+        coo[k].i--;
+        coo[k].j--;
+        coo[k].a = real;
+        if (coo[k].i == coo[k].j) k++;
         else {
-            coo->i[k + 1] = coo->j[k];
-            coo->j[k + 1] = coo->i[k];
-            coo->a->pairs[k + 1] = coo->a->pairs[k];
+            coo[k + 1].i = coo[k].j;
+            coo[k + 1].j = coo[k].i;
+            coo[k + 1].a = coo[k].a;
             k += 2;
         }
     }
     fclose(f);
-
+    qsort(coo, k, sizeof(matrix_coo), compar);
     *n = N; *nz = k;
-    quicksort_coo(coo, 0, k-1);
+
+    /* int ii;
+    for(ii = 0; ii < k; ii++)
+        printf("i=%d, j=%d, a=%e\n", coo[ii].i, coo[ii].j, coo[ii].a); */
+
+    coo->useTail = true;
 
     return coo;
 }
@@ -106,8 +85,8 @@ double coo_norm_inf(int n, int nz, matrix_coo *coo)
 {
     double *amax = CALLOC(double, n);
     for (int i = 0; i < nz; i++) {
-        int row = coo->i[i];
-        int val = coo->a->pairs[i];
+        int row = coo[i].i;
+        int val = coo[i].a;
         amax[row] += abs(val);
     }
     double norm = 0.0;
@@ -122,7 +101,7 @@ double coo_max_nz(int n, int nz, matrix_coo *coo)
 {
     double *m = CALLOC(double, n);
     for (int i = 0; i < nz; i++) {
-        int row = coo->i[i];
+        int row = coo[i].i;
         m[row]++;
     }
     int r = 0.0;
@@ -134,23 +113,43 @@ double coo_max_nz(int n, int nz, matrix_coo *coo)
 }
 
 // CSR matrix
-void csr_dmult(matrix_csr *mat, PairsArray *x, PairsArray *y)
+void csr_dmult(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 {
-    for (int k = 0; k < mat->n; k++) {
-        DOUBLE t = 0.0;
-        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-            t += mat->A->pairs[l] * (*x)[mat->j[l]];
-        (*y)[k] = t;
+    if(mat->useTail) {
+        for (int k = 0; k < mat->n; k++) {
+            DOUBLE t = 0.0;
+            for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
+                t += mat->A->pairs[l] * x[mat->j[l]];
+            y[k] = t;
+        }
+    }
+    else {
+        for (int k = 0; k < mat->n; k++) {
+            DOUBLE t = 0.0;
+            for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
+                t += mat->A->heads[l] * x[mat->j[l]];
+            y[k] = t;
+        }
     }
 }
 
-void csr_smult(matrix_csr *mat, HeadsArray *x, HeadsArray *y)
+void csr_smult(matrix_csr *mat, FLOAT *x, FLOAT *y)
 {
-    for (int k = 0; k < mat->n; k++) {
-        FLOAT2 t = 0.0;
-        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-            t += mat->A->heads[l] * (*x)[mat->j[l]];
-        (*y)[k] = t;
+    if(mat->useTail) {
+        for (int k = 0; k < mat->n; k++) {
+            FLOAT2 t = 0.0;
+            for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
+                t += mat->A->pairs[l] * x[mat->j[l]];
+            y[k] = t;
+        }
+    }
+    else {
+        for (int k = 0; k < mat->n; k++) {
+            FLOAT2 t = 0.0;
+            for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
+                t += mat->A->heads[l] * x[mat->j[l]];
+            y[k] = t;
+        }
     }
 }
 
@@ -164,9 +163,9 @@ matrix *csr_create(int n, int nz, matrix_coo *coo)
     i[0] = 0;
     int l = 0;
     for (int k = 0; k < n; k++) {
-        while (l < nz && coo->i[l] == k) {
-            j[l] = coo->j[l];
-            A->pairs[l] = coo->a->pairs[l];
+        while (l < nz && coo[l].i == k) {
+            j[l] = coo[l].j;
+            A->pairs[l] = coo[l].a;
             l++;
         }
         i[k + 1] = l;
@@ -177,29 +176,52 @@ matrix *csr_create(int n, int nz, matrix_coo *coo)
     mat->i = i;
     mat->j = j;
     mat->A = A;
-    mat->dmult = (void (*)(matrix *, PairsArray *, PairsArray *))csr_dmult;
-    mat->smult = (void (*)(matrix *, HeadsArray *, HeadsArray *))csr_smult;
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult;
+    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult;
+
+    mat->useTail = true;
+
     return (matrix *)mat;
 }
 
 // dense matrix
-void dense_dmult(matrix_dense *mat, PairsArray *x, PairsArray *y)
+void dense_dmult(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 {
-    for (int i = 0; i < mat->n; i++) {
-        DOUBLE t = 0.0;
-        for (int j = 0; j < mat->n; j++)
-            t += mat->A->pairs[i * mat->n + j] * (*x)[j];
-        (*y)[i] = t;
+    if(mat->useTail) {
+        for (int i = 0; i < mat->n; i++) {
+            DOUBLE t = 0.0;
+            for (int j = 0; j < mat->n; j++)
+                t += mat->A->pairs[i * mat->n + j] * x[j];
+            y[i] = t;
+        }
+    }
+    else {
+        for (int i = 0; i < mat->n; i++) {
+            DOUBLE t = 0.0;
+            for (int j = 0; j < mat->n; j++)
+                t += mat->A->heads[i * mat->n + j] * x[j];
+            y[i] = t;
+        }
     }
 }
 
-void dense_smult(uint8_t m, matrix_dense *mat, HeadsArray *x, HeadsArray *y)
+void dense_smult(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
 {
-    for (int i = 0; i < mat->n; i++) {
-        FLOAT2 t = 0.0;
-        for (int j = 0; j < mat->n; j++)
-            t += mat->A->heads[i * mat->n + j] * (*x)[j];
-        (*y)[i] = t;
+    if(mat->useTail) {
+        for (int i = 0; i < mat->n; i++) {
+            FLOAT2 t = 0.0;
+            for (int j = 0; j < mat->n; j++)
+                t += mat->A->pairs[i * mat->n + j] * x[j];
+            y[i] = t;
+        }
+    }
+    else {
+        for (int i = 0; i < mat->n; i++) {
+            FLOAT2 t = 0.0;
+            for (int j = 0; j < mat->n; j++)
+                t += mat->A->heads[i * mat->n + j] * x[j];
+            y[i] = t;
+        }
     }
 }
 
@@ -209,37 +231,43 @@ matrix *dense_create(int n, int nz, matrix_coo *coo)
     ManSegArray *A = new ManSegArray(n*n);
 
     // row major format
-    for (int k = 0; k < nz; k++) A->pairs[coo->i[k] * n + coo->j[k]] = coo->a->pairs[k];
+    for (int k = 0; k < nz; k++) A->pairs[coo[k].i * n + coo[k].j] = coo[k].a;
 
     matrix_dense *mat = new matrix_dense();
     mat->n = n;
-    mat->dmult = (void (*)(matrix *, PairsArray *, PairsArray *))dense_dmult;
-    mat->smult = (void (*)(matrix *, HeadsArray *, HeadsArray *))dense_smult;
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult;
+    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult;
     mat->A = A;
+
+    mat->useTail = true;
+
     return (matrix *)mat;
 }
 
 // Jacobi preconditioner
-void jacobi_smult(precond_jacobi *pre, HeadsArray *x, HeadsArray *y)
+void jacobi_smult(precond_jacobi *pre, FLOAT *x, FLOAT *y)
 {
     for (int k = 0; k < pre->n; k++) {
-       (*y)[k] = (*x)[k] / pre->d->heads[k];
+       y[k] = x[k] / pre->d[k];
     }
 }
 
 struct matrix *jacobi_create(int n, int nz, matrix_coo *coo)
 {
-    // FLOAT *d = ALLOC(FLOAT, n);
-    ManSegArray *d = new ManSegArray(n);
+    FLOAT *d = ALLOC(FLOAT, n);
+    // ManSegArray *d = new ManSegArray(n);
     for (int k = 0; k < n; k++) d[k] = 0.0;
     for (int k = 0; k < nz; k++)
-        if (coo->i[k] == coo->j[k])
-            d->heads[coo->i[k]] = coo->a->heads[k];
+        if (coo[k].i == coo[k].j)
+            d[coo[k].i] = coo[k].a;
 
     precond_jacobi *pre = new precond_jacobi();
     pre->n = n;
     pre->dmult = NULL;
-    pre->smult = (void (*)(matrix *, HeadsArray *, HeadsArray *))jacobi_smult;
+    pre->smult = (void (*)(matrix *, FLOAT *, FLOAT *))jacobi_smult;
     pre->d = d;
+
+    pre->useTail = true; /* unused */
+
     return (matrix *)pre;
 }

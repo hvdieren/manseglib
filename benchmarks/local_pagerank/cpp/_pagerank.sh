@@ -1,11 +1,5 @@
 #!/bin/bash
 
-rm pagerank pagerank.o msa_pagerank msa_pagerank.o
-rm msa_pagerank msa_pagerank.o
-
-make pagerank msa_pagerank
-# make msa_pagerank
-
 ## default small graphs ##
 # std
 echo "std version"
@@ -45,7 +39,7 @@ echo "msa version"
 # CSC
 # ./msa_pagerank default CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/smallGraph.csc"
 # ./msa_pagerank default CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/orkut_undir.csc"
-./msa_pagerank default CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/LiveJournal_dir.csc"
+# ./msa_pagerank default CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/LiveJournal_dir.csc"
 # ./msa_pagerank default CSC "/mnt/d/Jorta/Documents/Uni/4th Year/CSC3021_Concurrent_Programming/Assignments/graphs/rMatGraph_J_5_100.csc" 
 
 

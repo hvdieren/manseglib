@@ -1,12 +1,9 @@
 
 CCX=g++
-CCXFLAGS=-O3 -std=c++14 -msse
+CCXFLAGS=-O3 -std=c++17 -mavx2
 
 all: 
 	make tests
-
-main: main.o
-	${CCX} -o main main.o
 
 tests: tests.o
 	g++ -o tests tests.o

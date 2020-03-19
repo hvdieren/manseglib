@@ -576,24 +576,26 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
         cerr << "error: solution has not converged" << endl;
 
     // write to file
-    string outPath = "";
-    for(int i = inputFile.length()-1; i >= 0; --i)
-    {
-        char c = inputFile.at(i);
-        if(c == '/' || c == '\\')
-            break;
-        outPath += c;
-    }
-    reverse(outPath.begin(), outPath.end());
+    // string outPath = "";
+    // for(int i = inputFile.length()-1; i >= 0; --i)
+    // {
+    //     char c = inputFile.at(i);
+    //     if(c == '/' || c == '\\')
+    //         break;
+    //     outPath += c;
+    // }
+    // reverse(outPath.begin(), outPath.end());
 
-    ofstream of;
-    of.open(("./results/std_" + outPath + ".prvals"));
+    // ofstream of;
+    // of.open(("./results/std_" + outPath + ".prvals"));
 
-    of << setprecision(16);
-    for(int i = 0; i < n; ++i)
-        of << i << " " << x[i] << "\n";
+    // of << setprecision(16);
+    // for(int i = 0; i < n; ++i)
+    //     of << i << " " << x[i] << "\n";
 
-    of.close();
+    // of.close();
+
+    delete[] x, y, contr, outdeg;
 }
 
 int main(int argc, char** argv)

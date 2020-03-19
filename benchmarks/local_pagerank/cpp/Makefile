@@ -1,6 +1,6 @@
 
 CCX=g++
-CCXFLAGS=-O3 -std=c++11
+CCXFLAGS=-O3 -std=c++17 -mavx2
 
 all: 
 	make pagerank pagerank_check msa_pagerank

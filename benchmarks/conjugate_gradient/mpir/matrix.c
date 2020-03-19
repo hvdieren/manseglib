@@ -71,6 +71,10 @@ void coo_load(const char *fname, int *n, int *nz, struct matrix_coo **a)
     fclose(f);
     qsort(coo, k, sizeof(struct matrix_coo), compar);
     *n = N; *nz = k; *a = coo;
+
+    /* int ii;
+    for(ii = 0; ii < k; ii++)
+        printf("i=%d, j=%d, a=%e\n", coo[ii].i, coo[ii].j, coo[ii].a); */
 }
 
 double coo_norm_inf(int n, int nz, struct matrix_coo *coo)

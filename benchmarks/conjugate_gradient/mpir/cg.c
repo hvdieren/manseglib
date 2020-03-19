@@ -48,7 +48,6 @@ void conjugate_gradient(int n, struct matrix *A, struct matrix *M, FLOAT *b, FLO
             residual = floatm_norm2(n, tr);
             printf("# rescheck: %d %d %e %e\n", *in_iter, iter, (double)tol, (double)residual);
             if (residual / tol > 10) {
-                printf("\n==== CG converged ====\n");
                 break;
             }
             step = 1;

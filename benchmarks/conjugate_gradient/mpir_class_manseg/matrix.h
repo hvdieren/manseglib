@@ -1,24 +1,25 @@
 #ifndef __cg_MATRIX_H__
 #define __cg_MATRIX_H__
 
-// #include "../../../mantissaSegmentation.hpp"
+using namespace ManSeg;
 
 // definitions for matrices
 class matrix
 {
 public:
     int n;
+    bool useTail;
     
-    void (*dmult)(matrix *, PairsArray *, PairsArray *);
-    void (*smult)(matrix *, HeadsArray *, HeadsArray *);
+    void (*dmult)(matrix *, DOUBLE *, DOUBLE *);
+    void (*smult)(matrix *, FLOAT *, FLOAT *);
 };
 
 class matrix_coo : public matrix
 {
 public:
-    int *i, *j;
-    // double *a;
-    ManSegArray *a;
+    int i, j;
+    double a;
+    // ManSegArray *a;
 };
 
 class matrix_csr : public matrix
@@ -42,15 +43,14 @@ class precond_jacobi : public matrix
 {
 public:
     int n;
-    // float *d;
-    ManSegArray *d;
+    float *d;
 };
 
-static inline void matrix_mult(matrix *mat, PairsArray *x, PairsArray *y) {
+static inline void matrix_mult(matrix *mat, DOUBLE *x, DOUBLE *y) {
     mat->dmult(mat, x, y);
 }
 
-static inline void floatm_mult(matrix *mat, HeadsArray *x, HeadsArray *y) {
+static inline void floatm_mult(matrix *mat, FLOAT *x, FLOAT *y) {
     mat->smult(mat, x, y);
 }
 

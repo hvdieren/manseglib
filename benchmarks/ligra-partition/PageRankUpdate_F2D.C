@@ -187,7 +187,7 @@ void Compute(GraphType &GA, long start)
     intT m = GA.m;
     const double damping = 0.85;
     const double epsilon = 0.0000001;
-    const double float_limit = 5e-6f;    // not quite fully 1e-7, as beyond 1e-6 representation is sketchy
+    const double float_limit = 0.0001f;    // switch limit = 0.0001 -> 1e-4
     //Data Array
     //x and y to do special allocation
     //frontier also need special node allocation

@@ -1,12 +1,12 @@
 CC=gcc
-FLAGS= -O2
-OMPFLAGS= -O2 -fopenmp
+FLAGS= -O3 -mavx
+OMPFLAGS= -O3 -mavx -fopenmp
 
 CCX=g++
-CCXFLAGS= -std=c++11 -O2
-CCXOMPFLAGS= -std=c++11 -O2 -fopenmp
+CCXFLAGS= -std=c++17 -O3 -mavx
+CCXOMPFLAGS= -std=c++17 -O3 -mavx -fopenmp
 
-ALL = J_jacobi_up jacobi_omp jacobi_mod jacobi_mod_omp jacobi_mod_f jacobi_mod_f_omp
+ALL = J_jacobi_up jacobi_omp jacobi_mod jacobi_mod_omp
 
 all: $(ALL)
 

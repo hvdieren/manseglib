@@ -4,26 +4,9 @@
 #include <stdint.h>
 #include <immintrin.h>
 
-/* void printBinary(long long l)
-{
-    for(int i = 63; i >= 0; --i)
-    {
-        std::cout << ((l >> i) & 1);
-        if(i % 8 == 0 && i > 0)
-            std::cout << " ";
-    }
-}
-
-void printBinary(int l)
-{
-    for(int i = 31; i >= 0; --i)
-    {
-        std::cout << ((l >> i) & 1);
-        if(i % 8 == 0 && i > 0)
-            std::cout << " ";
-    }
-}
-
+#ifndef DEBUG_FUNC_MANSEG
+#define DEBUG_FUNC_MANSEG
+// print binary of double
 void printBinary(double d)
 {
     unsigned long l = *reinterpret_cast<unsigned long*>(&d);
@@ -35,8 +18,10 @@ void printBinary(double d)
         else if(i == 32)
             std::cout << "|";
     }
+    std::cout << std::endl;
 }
 
+// print binary of float
 void printBinary(float f)
 {
     unsigned int l = *reinterpret_cast<unsigned int*>(&f);
@@ -49,15 +34,17 @@ void printBinary(float f)
     std::cout << std::endl;
 }
 
-void printBinary(long l)
+// print binary of int
+void printBinary(int l)
 {
-    for(int i = 63; i >= 0; --i)
+    for(int i = 31; i >= 0; --i)
     {
         std::cout << ((l >> i) & 1);
         if(i % 8 == 0 && i > 0)
             std::cout << " ";
     }
-} */
+}
+#endif
 
 namespace ManSeg
 {

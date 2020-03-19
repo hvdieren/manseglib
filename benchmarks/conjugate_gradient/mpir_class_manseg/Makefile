@@ -1,5 +1,5 @@
 CCX = g++
-CCXFLAGS = -std=c++11 -O3
+CCXFLAGS = -std=c++11 -O3 -mavx
 LDFLAGS = -lm -lrt
 
 .SECONDARY:

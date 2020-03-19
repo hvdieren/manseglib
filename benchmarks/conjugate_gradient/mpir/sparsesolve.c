@@ -82,16 +82,16 @@ int main(int argc, char *argv[])
     DOUBLE norm = coo_norm_inf(n, nz, coo);
     free(coo);
 
-    printf("# algorithm: %s\n", argv[1]);
-    printf("# sizeof FLOAT: %lu\n", sizeof(FLOAT));
+    printf("# algorithm            : %s\n", argv[0]);
+    printf("# sizeof FLOAT         : %lu\n", sizeof(FLOAT));
     // printf("# roundoff: %e\n", epsilon(bits));
-    printf("# matrix: %s\n", argv[2]);
-    printf("# problem_size: %d\n", n);
-    printf("# nnz: %d\n", nz);
-    printf("# matrix_norm: %e\n", (double)norm);
-    printf("# matrix_error: %e\n", (double)max);
-    printf("# bnorm: %e\n", (double)vector_norm2(n, b));
-
+    printf("# matrix               : %s\n", argv[1]);
+    printf("# problem_size         : %d\n", n);
+    printf("# nnz                  : %d\n", nz);
+    printf("# matrix_norm          : %e\n", (double)norm);
+    printf("# matrix_error         : %e\n", (double)max);
+    printf("# bnorm                : %e\n\n", (double)vector_norm2(n, b));
+    
     // randomize guesses in x
     vector_rand(n, x);
 
@@ -118,16 +118,16 @@ int main(int argc, char *argv[])
     DOUBLE residual = vector_norm2(n, r);
     DOUBLE normalized_residual = residual / (vector_norm2(n, x) * norm);
 
-    printf("# outer_maxiter: %d\n", out_maxiter);
-    printf("# outer_tolerance: %e\n", (double)out_tol);
-    printf("# inner_maxiter: %d\n", in_maxiter);
-    printf("# inner_tolerance: %e\n", (double)in_tol);
-    printf("# outer_iterations: %d\n", out_iter);
-    printf("# inner_iterations: %d\n", in_iter);
-    printf("# residual: %e\n", (double)residual);
-    printf("# normalized_residual: %e\n", (double)normalized_residual);
+    printf("# outer_maxiter        : %d\n", out_maxiter);
+    printf("# outer_tolerance      : %e\n", (double)out_tol);
+    printf("# inner_maxiter (cg)   : %d\n", in_maxiter);
+    printf("# inner_tolerance (cg) : %e\n", (double)in_tol);
+    printf("# outer_iterations (ir): %d\n", out_iter);
+    printf("# inner_iterations (cg): %d\n", in_iter);
+    printf("# residual (ir)        : %e\n", (double)residual);
+    printf("# normalized_residual  : %e\n", (double)normalized_residual);
 
-    printf("\n# Time taken: %e s\n", time_taken);
+    printf("\n# Time taken           : %.7f s\n", time_taken);
 
     return 0;
 }

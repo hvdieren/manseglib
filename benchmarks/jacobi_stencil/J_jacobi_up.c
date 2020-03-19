@@ -32,8 +32,8 @@
 #include <math.h>
 #include <time.h>
 
-#define NB 128
-#define B 32
+#define NB 512
+#define B 8
 #define FALSE (0)
 #define TRUE (1)
 
@@ -47,7 +47,7 @@ typedef fp_type *binout;
 
 fp_type *A[NB][NB];
 fp_type *A_new[NB][NB];
-fp_type *tmp[NB][NB];
+// fp_type *tmp[NB][NB];
 fp_type blockDelta[NB][NB];
 
 void alloc_and_genmat()
@@ -63,10 +63,10 @@ void alloc_and_genmat()
         {
             A[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
             A_new[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
-            tmp[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
+            // tmp[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
             
             blockDelta[ii][jj] = 0.0;
-            if (A[ii][jj] == NULL || A_new[ii][jj] == NULL || tmp[ii][jj] == NULL)
+            if (A[ii][jj] == NULL || A_new[ii][jj] == NULL)// || tmp[ii][jj] == NULL)
             {
                 printf("Out of memory\n");
                 exit(1);
@@ -151,13 +151,12 @@ void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo, bin A, bin
             right = (j == B - 1 ? righthalo[i] : A[i * B + j + 1]);
             bottom = (i == B - 1 ? bottomhalo[i] : A[(i + 1) * B + j]);
 
-            // A_new[i * B + j] = 0.2 * (A[i * B + j] + left + top + right + bottom);
+            fp_type deltaTmp = (*blockDelta);
             fullResult = 0.2 * (A[i * B + j] + left + top + right + bottom);
             A_new[i * B + j] = fullResult;
 
             // record difference between full result and stored value
             // (*blockDelta) += fabs(fullResult - A_new[i * B + j])
-            fp_type deltaTmp = (*blockDelta);
             fp_type y = fabs(fullResult - A_new[i * B + j]) + deltaErr;
             
             (*blockDelta) = deltaTmp + y;
@@ -203,12 +202,19 @@ void compute(int niters)
             } // jj
         } // ii
 
-        // tmp <---- A_new  (give temp new values)
+        /* // tmp <---- A_new  (give temp new values)
         memcpy(tmp, A_new, sizeof(fp_type)*NB*NB);
         // A_new < ----- A  (give A_new old A values)
         memcpy(A_new, A, sizeof(fp_type)*NB*NB);
         // A <------ tmp    (A gets new values)
-        memcpy(A, tmp, sizeof(fp_type)*NB*NB);
+        memcpy(A, tmp, sizeof(fp_type)*NB*NB); */
+
+        // copy instead of swap
+        for(int i = 0; i < NB; ++i)
+            for(int j = 0; j < NB; ++j)
+                for(int k = 0; k < B; ++k)
+                    for(int l = 0; l < B; ++l)
+                        A[i][j][k * B + l] = A_new[i][j][k * B + l];
     } // iter
 }
 
