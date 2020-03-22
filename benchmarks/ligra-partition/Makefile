@@ -3,8 +3,8 @@ INTT = -DLONG
 #INTE = -DEDGELONG
 
 #MACHINE:M
-M=jacob
-HOME = /home/jsun
+# M=jacob
+# HOME = /home/jsun
 #cilkview tool using the envirment
 #LID= /var/shared/cilktools-4225/include/cilktools
 #LID= -I$(HOME)/../../usr/include -I$(HOME)/../../usr/lib64 -L$(HOME)/../../usr/lib64
@@ -27,18 +27,23 @@ HOME = /home/jsun
 #else
 
 #ifeq ($USER,"jsun")
-SWANCCDIR=/home/jsun/swanModel/$(M)/llvm-clang/bin
-SWANRTDIR=${HOME}/swanModel/$(M)/cilk-swan
+# SWANCCDIR=/home/jsun/swanModel/$(M)/llvm-clang/bin
+# SWANRTDIR=${HOME}/swanModel/$(M)/cilk-swan
+SWANCCDIR=../../llvm-clang/bin
+SWANRTDIR=../../cilk-swan
 #else
 #SWANCCDIR=$(HOME)/work/research/llvm/bin
 #SWANRTDIR=$(HOME)/work/research/llvm
 #endif
 
-PCC = $(SWANCCDIR)/clang++
-PCFLAGS = -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) -I $(SWANRTDIR)/include -L $(SWANRTDIR)/lib -ldl
+# PCC = $(SWANCCDIR)/clang++
+# PCFLAGS = -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) -I $(SWANRTDIR)/include -L $(SWANRTDIR)/lib -ldl
+
+CXX = $(SWANCCDIR)/clang++
+CXXFLAGS = -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) -I $(SWANRTDIR)/include -L $(SWANRTDIR)/lib -ldl
 
 #PCFLAGS += -I./cilkpub_v105/include
-COMMON=papi_code.h utils.h IO.h parallel.h gettime.h quickSort.h parseCommandLine.h mm.h partitioner.h graph-numa.h ligra-numa.h mantissaSegmentation.hpp mantissaSegmentation_f.hpp
+COMMON=papi_code.h utils.h IO.h parallel.h gettime.h quickSort.h parseCommandLine.h mm.h partitioner.h graph-numa.h ligra-numa.h
 
 ALL= BFS BC Components PageRank PageRankDelta BellmanFord SPMV BP PageRankUpdate PageRankBit PageRankConverage PageRankManSeg PageRankManSeg_f BPUpdate BPManSeg
 #csc and coo mix, csc for less partition, coo for more partition, inner threshold is GA.m/2
@@ -50,7 +55,7 @@ all: $(ALL)
 #other option
 CLIDOPT += -std=c++11
 #CACHE collection, if PAPI_CACHE=1 collect and print the values
-CACHEOPT += -lpapi -DPAPI_CACHE=0
+#CACHEOPT += -lpapi -DPAPI_CACHE=0
 # not use atomic for forward and coo 
 SEQOPT += -DPART96=0
 # NUMA special allocation
@@ -61,7 +66,7 @@ REUSEOPT += -DREUSE_DIST=0
 # OPT += -Wall -Wno-cilk-loop-control-var-modification
 
 % : %.C $(COMMON)
-	$(PCC) $(PCFLAGS) $(CFLAGS) $(NUMAOPT) $(CLIDOPT) $(SEQOPT) $(OPT) $(CACHEOPT) -o $@ $< $(LIBS_I_NEED)
+	$(CXX) $(CXXFLAGS) $(CFLAGS) $(NUMAOPT) $(CLIDOPT) $(SEQOPT) $(OPT) $(CACHEOPT) -o $@ $< $(LIBS_I_NEED)
 
 .PHONY : clean
 

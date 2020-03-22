@@ -22,11 +22,15 @@ void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int
     vector_set(n, 0.0, x);
     mixed_copy(n, b, r); // r = (float)b
 
+    // TODO: somehow make it so that the first couple of iterations
+    // do full precision, then switch to low, then switch back up when
+    // limit is reached; or something
+
     DOUBLE residual;
     do
     {
         conjugate_gradient(n, A, M, r, d, in_maxiter, in_tol, step_check, in_iter);
-
+        
         mixed_axpy(n, 1.0, d, x); // x = x + d
         matrix_mult(A, x, e);
         vector_xpby(n, b, -1.0, e); // r = b - Ax
@@ -38,6 +42,12 @@ void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int
         // *energy += iter * (bits + 12) / 8;
         // printf("%d %d %d %e %e\n", *in_iter, 0, bits, (double)residual, (double)residual);
         (*out_iter)++;
+
+        if(!A->useTail && residual <= AdaptivePrecisionBound) {
+			mat_increase_precision(A);
+			printf("increased precision after %d iterations, residual=%e\n", *in_iter, residual);
+		}
+
     } while ((residual > out_tol) && (*out_iter < out_maxiter));
 
     if (residual <= out_tol)

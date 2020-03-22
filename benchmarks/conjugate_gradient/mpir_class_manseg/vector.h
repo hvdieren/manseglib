@@ -86,6 +86,32 @@ static inline FLOAT2 floatm_diff_norm2(int n, FLOAT *x, FLOAT *y) {
     return sqrt(r);
 }
 
+static inline DOUBLE double_norm_diff(int n, DOUBLE *x, DOUBLE *y) {
+    DOUBLE d = 0.0;
+    DOUBLE err = 0.0;
+    for(int i = 0; i < n; i++) {
+        DOUBLE temp = d;
+        DOUBLE r = std::fabs(y[i] - x[i]) + err;
+        d = temp + r;
+        err = temp - d;
+        err += r;
+    }
+    return d;
+}
+
+static inline FLOAT2 float_norm_diff(int n, FLOAT *x, FLOAT *y) {
+    FLOAT2 d = 0.0;
+    FLOAT2 err = 0.0;
+    for(int i = 0; i < n; i++) {
+        FLOAT2 temp = d;
+        FLOAT2 r = std::fabs(y[i] - x[i]) + err;
+        d = temp + r;
+        err = temp - d;
+        err += r;
+    }
+    return d;
+}
+
 // mixed precision routines
 
 static inline void mixed_copy(int n, DOUBLE *x, FLOAT *y) {

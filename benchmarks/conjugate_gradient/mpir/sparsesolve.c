@@ -129,5 +129,9 @@ int main(int argc, char *argv[])
 
     printf("\n# Time taken           : %.7f s\n", time_taken);
 
+    // printf("\n--- values out ---\n");
+    // for(int i = 0; i < n; i++)
+    //     printf("%e\n", x[i]);
+
     return 0;
 }

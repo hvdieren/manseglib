@@ -46,7 +46,7 @@ void conjugate_gradient(int n, struct matrix *A, struct matrix *M, FLOAT *b, FLO
             floatm_mult(A, x, tr);
             floatm_xpby(n, b, -1.0, tr);
             residual = floatm_norm2(n, tr);
-            printf("# rescheck: %d %d %e %e\n", *in_iter, iter, (double)tol, (double)residual);
+            printf("# rescheck: total_cg_iter=%d current_iter=%d tol=%e resid=%e\n", *in_iter, iter, (double)tol, (double)residual);
             if (residual / tol > 10) {
                 break;
             }

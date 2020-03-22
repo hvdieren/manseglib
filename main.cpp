@@ -14,6 +14,43 @@
 
 using namespace ManSeg;
 
+void printBinary(double d)
+{
+    unsigned long l = *reinterpret_cast<unsigned long*>(&d);
+    for(int i = 63; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i == 63 || i == 52)
+            std::cout << " ";
+        else if(i == 32)
+            std::cout << "|";
+    }
+    std::cout << std::endl;
+}
+
+// print binary of float
+void printBinary(float f)
+{
+    unsigned int l = *reinterpret_cast<unsigned int*>(&f);
+    for(int i = 31; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i == 31 || i == 23)
+            std::cout << " ";
+    }
+    std::cout << std::endl;
+}
+
+// print binary of int
+void printBinary(int l)
+{
+    for(int i = 31; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i % 8 == 0 && i > 0)
+            std::cout << " ";
+    }
+}
 
 int main5(int argc, char** argv)
 {

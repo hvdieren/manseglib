@@ -6,6 +6,8 @@ benchmarks/visual_cpp_pagerank/Debug/
 benchmarks/visual_cpp_pagerank/Release/
 benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Debug/
 benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Release/
+cilk-swan/
+llvm-clang/
 
 ##  files  ##
 *.o
@@ -15,6 +17,7 @@ benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Release/
 *.out
 *.pr_vals
 *.png
+*.asm
 
 ##  binaries  ##
 

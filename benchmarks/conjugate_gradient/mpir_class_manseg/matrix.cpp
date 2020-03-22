@@ -76,7 +76,7 @@ matrix_coo* coo_load(const char *fname, int *n, int *nz)
     for(ii = 0; ii < k; ii++)
         printf("i=%d, j=%d, a=%e\n", coo[ii].i, coo[ii].j, coo[ii].a); */
 
-    coo->useTail = true;
+    coo->useTail = false;
 
     return coo;
 }
@@ -113,44 +113,60 @@ double coo_max_nz(int n, int nz, matrix_coo *coo)
 }
 
 // CSR matrix
-void csr_dmult(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
+void csr_dmult_heads(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 {
-    if(mat->useTail) {
-        for (int k = 0; k < mat->n; k++) {
-            DOUBLE t = 0.0;
-            for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-                t += mat->A->pairs[l] * x[mat->j[l]];
-            y[k] = t;
-        }
-    }
-    else {
-        for (int k = 0; k < mat->n; k++) {
-            DOUBLE t = 0.0;
-            for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-                t += mat->A->heads[l] * x[mat->j[l]];
-            y[k] = t;
-        }
+    for (int k = 0; k < mat->n; k++) {
+        DOUBLE t = 0.0;
+        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
+            t += mat->A->heads[l] * x[mat->j[l]];
+        y[k] = t;
     }
 }
 
-void csr_smult(matrix_csr *mat, FLOAT *x, FLOAT *y)
+void csr_dmult_full(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 {
-    if(mat->useTail) {
-        for (int k = 0; k < mat->n; k++) {
-            FLOAT2 t = 0.0;
-            for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-                t += mat->A->pairs[l] * x[mat->j[l]];
-            y[k] = t;
-        }
+    for (int k = 0; k < mat->n; k++) {
+        DOUBLE t = 0.0;
+        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
+            t += mat->A->full[l] * x[mat->j[l]];
+        y[k] = t;
     }
-    else {
-        for (int k = 0; k < mat->n; k++) {
-            FLOAT2 t = 0.0;
-            for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-                t += mat->A->heads[l] * x[mat->j[l]];
-            y[k] = t;
-        }
+}
+
+// todo: create separate version without branch and test performance
+// when you do precision switch, swap function pointer
+void csr_smult_heads(matrix_csr *mat, FLOAT *x, FLOAT *y)
+{
+    for (int k = 0; k < mat->n; k++) {
+        FLOAT2 t = 0.0;
+        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
+            t += mat->A->heads[l] * x[mat->j[l]];
+        y[k] = t;
     }
+}
+
+void csr_smult_full(matrix_csr *mat, FLOAT *x, FLOAT *y)
+{
+    for (int k = 0; k < mat->n; k++) {
+        FLOAT2 t = 0.0;
+        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
+            t += mat->A->full[l] * x[mat->j[l]];
+        y[k] = t;
+    }
+}
+
+inline void csr_precision_increase(matrix_csr *mat)
+{
+    // mat->A->del_segments();
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_full;
+    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_full;
+}
+
+inline void csr_precision_reduce(matrix_csr *mat)
+{
+    // mat->A->del_segments();
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_heads;
+    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_heads;
 }
 
 matrix *csr_create(int n, int nz, matrix_coo *coo)
@@ -159,6 +175,7 @@ matrix *csr_create(int n, int nz, matrix_coo *coo)
     int *j = ALLOC(int, nz);
     // DOUBLE *A = ALLOC(DOUBLE, nz);
     ManSegArray *A = new ManSegArray(nz);
+    A->full = new double[nz];
 
     i[0] = 0;
     int l = 0;
@@ -171,74 +188,103 @@ matrix *csr_create(int n, int nz, matrix_coo *coo)
         i[k + 1] = l;
     }
 
+    // copy across values
+    for (int k = 0; k < n; k++) {
+        DOUBLE t = 0.0;
+        for (int l = i[k]; l < i[k + 1]; l++)
+            A->full[l] = A->pairs[l];
+    }
+
     matrix_csr *mat = new matrix_csr();
     mat->n = n;
     mat->i = i;
     mat->j = j;
     mat->A = A;
-    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult;
-    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult;
-
+    // mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_heads;
+    // mat->smult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_smult_heads;
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_full;
+    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_full;
+    mat->precision_increase = (void (*)(matrix *))csr_precision_increase;
+	mat->precision_reduce = (void (*)(matrix *))csr_precision_reduce;
     mat->useTail = true;
 
     return (matrix *)mat;
 }
 
 // dense matrix
-void dense_dmult(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
+void dense_dmult_heads(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 {
-    if(mat->useTail) {
-        for (int i = 0; i < mat->n; i++) {
-            DOUBLE t = 0.0;
-            for (int j = 0; j < mat->n; j++)
-                t += mat->A->pairs[i * mat->n + j] * x[j];
-            y[i] = t;
-        }
-    }
-    else {
-        for (int i = 0; i < mat->n; i++) {
-            DOUBLE t = 0.0;
-            for (int j = 0; j < mat->n; j++)
-                t += mat->A->heads[i * mat->n + j] * x[j];
-            y[i] = t;
-        }
+    for (int i = 0; i < mat->n; i++) {
+        DOUBLE t = 0.0;
+        for (int j = 0; j < mat->n; j++)
+            t += mat->A->heads[i * mat->n + j] * x[j];
+        y[i] = t;
     }
 }
 
-void dense_smult(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
+void dense_dmult_full(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 {
-    if(mat->useTail) {
-        for (int i = 0; i < mat->n; i++) {
-            FLOAT2 t = 0.0;
-            for (int j = 0; j < mat->n; j++)
-                t += mat->A->pairs[i * mat->n + j] * x[j];
-            y[i] = t;
-        }
+    for (int i = 0; i < mat->n; i++) {
+        DOUBLE t = 0.0;
+        for (int j = 0; j < mat->n; j++)
+            t += mat->A->full[i * mat->n + j] * x[j];
+        y[i] = t;
     }
-    else {
-        for (int i = 0; i < mat->n; i++) {
-            FLOAT2 t = 0.0;
-            for (int j = 0; j < mat->n; j++)
-                t += mat->A->heads[i * mat->n + j] * x[j];
-            y[i] = t;
-        }
+}
+
+void dense_smult_heads(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
+{
+    for (int i = 0; i < mat->n; i++) {
+        FLOAT2 t = 0.0;
+        for (int j = 0; j < mat->n; j++)
+            t += mat->A->heads[i * mat->n + j] * x[j];
+        y[i] = t;
     }
+}
+
+void dense_smult_full(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
+{
+    for (int i = 0; i < mat->n; i++) {
+        FLOAT2 t = 0.0;
+        for (int j = 0; j < mat->n; j++)
+            t += mat->A->full[i * mat->n + j] * x[j];
+        y[i] = t;
+    }
+}
+
+inline void dense_precision_increase(matrix_dense *mat)
+{
+    // mat->A->del_segments();
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult_full;
+    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult_full;
+}
+
+inline void dense_precision_reduce(matrix_csr *mat)
+{
+	// mat->A->del_segments();
+	mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult_heads;
+	mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult_heads;
 }
 
 matrix *dense_create(int n, int nz, matrix_coo *coo)
 {
     // DOUBLE *A = CALLOC(DOUBLE, n * n);
     ManSegArray *A = new ManSegArray(n*n);
+    A->full = new double[n*n];
 
     // row major format
     for (int k = 0; k < nz; k++) A->pairs[coo[k].i * n + coo[k].j] = coo[k].a;
+    
+    // copy values across during creation
+    for(int k = 0; k < nz; k++) A->full[k] = A->pairs[k];
 
     matrix_dense *mat = new matrix_dense();
     mat->n = n;
-    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult;
-    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult;
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult_heads;
+    mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult_heads;
     mat->A = A;
-
+    mat->precision_increase = (void (*)(matrix *))dense_precision_increase;
+	mat->precision_reduce = (void (*)(matrix *))dense_precision_reduce;
     mat->useTail = true;
 
     return (matrix *)mat;
@@ -266,8 +312,8 @@ struct matrix *jacobi_create(int n, int nz, matrix_coo *coo)
     pre->dmult = NULL;
     pre->smult = (void (*)(matrix *, FLOAT *, FLOAT *))jacobi_smult;
     pre->d = d;
-
-    pre->useTail = true; /* unused */
+    pre->precision_increase = NULL; /* unused */
+    pre->useTail = false; /* unused */
 
     return (matrix *)pre;
 }

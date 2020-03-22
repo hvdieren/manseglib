@@ -130,5 +130,18 @@ int main(int argc, char *argv[])
 
     printf("\n# Time taken           : %.7f s\n", time_taken);
 
+    // todo: dump x values
+    // char *st = &argv[1][7];
+    // char *ed = &argv[1][strlen(argv[1])-4];
+    // char *fname = (char*)calloc(1, ed-st+1+10);
+    // sprintf(fname, "../out/%s", fname);
+    // memcpy(&fname[7], st, ed-st);
+    // sprintf(fname, "%s.out", fname);
+
+
+    // printf("\n--- values out ---\n");
+    // for(int i = 0; i < n; i++)
+    //     printf("%e\n", x[i]);
+
     return 0;
 }

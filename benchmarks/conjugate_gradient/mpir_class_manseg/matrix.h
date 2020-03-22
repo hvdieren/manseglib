@@ -12,6 +12,9 @@ public:
     
     void (*dmult)(matrix *, DOUBLE *, DOUBLE *);
     void (*smult)(matrix *, FLOAT *, FLOAT *);
+
+    void (*precision_increase)(matrix *);
+	void (*precision_reduce)(matrix *);
 };
 
 class matrix_coo : public matrix
@@ -52,6 +55,16 @@ static inline void matrix_mult(matrix *mat, DOUBLE *x, DOUBLE *y) {
 
 static inline void floatm_mult(matrix *mat, FLOAT *x, FLOAT *y) {
     mat->smult(mat, x, y);
+}
+
+static inline void mat_increase_precision(matrix* mat) {
+    mat->useTail = true;
+    mat->precision_increase(mat);
+}
+
+static inline void mat_reduce_precision(matrix* mat) {
+    mat->useTail = false;
+    mat->precision_reduce(mat);
 }
 
 extern matrix_coo *coo_load(const char *fname, int *n, int *nz);
