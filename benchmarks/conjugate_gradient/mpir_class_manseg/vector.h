@@ -22,6 +22,7 @@ static inline void vector_xpby(int n, DOUBLE *x, DOUBLE b, DOUBLE *y) {
     for (int i = 0; i < n; i++) y[i] = x[i] + b * y[i];
 }
 
+// i.e. inner product
 static inline DOUBLE vector_dot(int n, DOUBLE *x, DOUBLE *y) {
     DOUBLE r = 0.0;
     for (int i = 0; i < n; i++) r += y[i] * x[i];
@@ -43,30 +44,36 @@ static inline void floatm_rand(int n, FLOAT *x) {
     for (int i = 0; i < n; i++) x[i] = rand() / (double)RAND_MAX;
 }
 
+// y = x
 static inline void floatm_copy(int n, FLOAT *x, FLOAT *y) {
     for (int i = 0; i < n; i++) y[i] = x[i];
 }
 
+// y = y + x*a
 static inline void floatm_axpy(int n, FLOAT a, FLOAT *x, FLOAT *y) {
     for (int i = 0; i < n; i++) y[i] = y[i] + x[i] * a;
 }
 
+// y = x + b*y
 static inline void floatm_xpby(int n, FLOAT *x, FLOAT b, FLOAT *y) {
     for (int i = 0; i < n; i++) y[i] = x[i] + b * y[i];
 }
 
 // the dot product can be computed with more precision than FLOAT
 
+// inner product
 static inline FLOAT2 floatm_dot(int n, FLOAT *x, FLOAT *y) {
     FLOAT2 r = 0.0;
     for (int i = 0; i < n; i++) r += y[i] * x[i];
     return r;
 }
 
+// sqrt(inner product(x))
 static inline FLOAT2 floatm_norm2(int n, FLOAT *x) {
     return sqrt(floatm_dot(n, x, x));
 }
 
+// sum(y*(xa))
 static inline FLOAT2 floatm_axpy_dot(int n, FLOAT a, FLOAT *x, FLOAT *y) {
     FLOAT2 r = 0.0;
     for (int i = 0; i < n; i++) {
@@ -77,6 +84,7 @@ static inline FLOAT2 floatm_axpy_dot(int n, FLOAT a, FLOAT *x, FLOAT *y) {
     return r;
 }
 
+// sqrt( sum((x-y)^2) )
 static inline FLOAT2 floatm_diff_norm2(int n, FLOAT *x, FLOAT *y) {
     FLOAT2 r = 0.0;
     for (int i = 0; i < n; i++) {
@@ -84,6 +92,23 @@ static inline FLOAT2 floatm_diff_norm2(int n, FLOAT *x, FLOAT *y) {
         r += t * t;
     }
     return sqrt(r);
+}
+
+// z = max(abs(x - y), tol)
+static inline void floatm_max_abs_diff(int n, FLOAT *x, FLOAT *y, FLOAT2* z, FLOAT2 tol) {
+	for(int i = 0; i < n; i++) {
+		z[i] = std::max(fabs(((double)x[i] - (double)y[i])), tol);
+	}
+}
+
+// z = y ./ x
+static inline void floatm_ratio(int n, FLOAT *x, FLOAT *y, FLOAT2 *z) {
+	for(int i = 0; i < n; i++) z[i] = (y[i] / x[i]);
+}
+
+// z = abs(x - y)
+static inline void floatm_abs_diff(int n, FLOAT *x, FLOAT *y, FLOAT *z) {
+	for(int i = 0; i < n; i++) z[i] = fabsf(x[i] - y[i]);
 }
 
 static inline DOUBLE double_norm_diff(int n, DOUBLE *x, DOUBLE *y) {

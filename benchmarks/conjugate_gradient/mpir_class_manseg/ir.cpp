@@ -9,6 +9,9 @@
 #include "vector.h"
 #include "matrix.h"
 
+void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int maxiter, FLOAT umbral, int step_check, int *in_iter,
+						FLOAT *x_prev, FLOAT2 *component_diff_x_cur, FLOAT2 *component_diff_x_prev);
+
 void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int maxiter, FLOAT umbral, int step_check, int *in_iter);
 
 void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int out_maxiter, DOUBLE out_tol, 
@@ -17,19 +20,27 @@ void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int
     DOUBLE *e = ALLOC(DOUBLE, n);
     FLOAT *r = ALLOC(FLOAT, n);
     FLOAT *d = ALLOC(FLOAT, n);
+	// FLOAT *d_prev = ALLOC(FLOAT, n);
+	// DOUBLE *component_diff_x_cur = ALLOC(DOUBLE, n);
+	// DOUBLE *component_diff_x_prev = ALLOC(DOUBLE, n);
 
     mixed_copy(n, x, d); // d = (float)x
-    vector_set(n, 0.0, x);
-    mixed_copy(n, b, r); // r = (float)b
 
-    // TODO: somehow make it so that the first couple of iterations
-    // do full precision, then switch to low, then switch back up when
-    // limit is reached; or something
+	// floatm_copy(n, d, d_prev);
+
+    vector_set(n, 0.0, x);
+
+	// vector_set(n, 0.0f, component_diff_x_cur);
+	// vector_set(n, 0.0f, component_diff_x_prev);
+
+    mixed_copy(n, b, r); // r = (float)b
 
     DOUBLE residual;
     do
     {
-        conjugate_gradient(n, A, M, r, d, in_maxiter, in_tol, step_check, in_iter);
+        // conjugate_gradient(n, A, M, r, d, in_maxiter, in_tol, step_check, in_iter,
+		// 					d_prev, component_diff_x_cur, component_diff_x_prev);
+		conjugate_gradient(n, A, M, r, d, in_maxiter, in_tol, step_check, in_iter);
         
         mixed_axpy(n, 1.0, d, x); // x = x + d
         matrix_mult(A, x, e);
@@ -38,17 +49,14 @@ void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int
 
         mixed_copy(n, e, r);
         floatm_set(n, 0.0, d);
+		// floatm_set(n, 0.0f, d_prev);
 
         // *energy += iter * (bits + 12) / 8;
         // printf("%d %d %d %e %e\n", *in_iter, 0, bits, (double)residual, (double)residual);
-        (*out_iter)++;
-
-        if(!A->useTail && residual <= AdaptivePrecisionBound) {
-			mat_increase_precision(A);
-			printf("increased precision after %d iterations, residual=%e\n", *in_iter, residual);
-		}
-
+        (*out_iter)++;		
     } while ((residual > out_tol) && (*out_iter < out_maxiter));
+
+	// *in_iter += *out_iter;
 
     if (residual <= out_tol)
         printf("\n==== residual less than out_tol ====\n");
@@ -56,4 +64,6 @@ void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int
     FREE(e);
     FREE(r);
     FREE(d);
+	// FREE(d_prev);
+	// FREE(component_diff_x_cur);    FREE(component_diff_x_prev);
 }

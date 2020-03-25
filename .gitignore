@@ -8,6 +8,7 @@ benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Debug/
 benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Release/
 cilk-swan/
 llvm-clang/
+graphs/
 
 ##  files  ##
 *.o

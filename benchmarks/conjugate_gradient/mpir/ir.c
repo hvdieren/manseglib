@@ -39,9 +39,6 @@ void iterative_refinement(int n, struct matrix *A, struct matrix *M, DOUBLE *b, 
         // *energy += iter * (bits + 12) / 8;
         // printf("%d %d %d %e %e\n", *in_iter, 0, bits, (double)residual, (double)residual);
         (*out_iter)++;
-
-        printf("ir.c ==> res=%e\n", residual);
-        
     } while ((residual > out_tol) && (*out_iter < out_maxiter));
 
     if (residual <= out_tol)

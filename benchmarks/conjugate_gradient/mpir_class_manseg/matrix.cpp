@@ -133,8 +133,6 @@ void csr_dmult_full(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
     }
 }
 
-// todo: create separate version without branch and test performance
-// when you do precision switch, swap function pointer
 void csr_smult_heads(matrix_csr *mat, FLOAT *x, FLOAT *y)
 {
     for (int k = 0; k < mat->n; k++) {
@@ -200,13 +198,14 @@ matrix *csr_create(int n, int nz, matrix_coo *coo)
     mat->i = i;
     mat->j = j;
     mat->A = A;
-    // mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_heads;
-    // mat->smult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_smult_heads;
-    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_full;
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_heads;
+    // mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_heads;
+    // mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_full;
     mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_full;
     mat->precision_increase = (void (*)(matrix *))csr_precision_increase;
 	mat->precision_reduce = (void (*)(matrix *))csr_precision_reduce;
-    mat->useTail = true;
+	mat->useTail = false;
+    // mat->useTail = true;
 
     return (matrix *)mat;
 }
@@ -285,7 +284,7 @@ matrix *dense_create(int n, int nz, matrix_coo *coo)
     mat->A = A;
     mat->precision_increase = (void (*)(matrix *))dense_precision_increase;
 	mat->precision_reduce = (void (*)(matrix *))dense_precision_reduce;
-    mat->useTail = true;
+    mat->useTail = false;
 
     return (matrix *)mat;
 }

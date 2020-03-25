@@ -9,116 +9,169 @@
 #include "vector.h"
 #include "matrix.h"
 
+void inline check_x_delta(int *n, matrix *A, FLOAT *x, FLOAT *x_prev, int *in_iter, FLOAT2 *residual)
+{
+	// DOUBLE x_diff = floatm_max_diff(*n, x_prev, x);							// find max delta in solution (x) vector
+	// printf("x_diff=%e\n", x_diff);
+	// if (x_diff <= AdaptivePrecisionBound) {									// if close to the max precision of the reduced format, switch to use full precision
+	// 	mat_increase_precision(A);
+	// 	printf("increased precision at iter %d, x_diff=%e, residual=%e\n", *in_iter, x_diff, *residual);
+	// }
+}
+
+// void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int maxiter, FLOAT umbral, int step_check, int *in_iter,
+// 						FLOAT *x_prev, FLOAT2 *component_diff_x_cur, FLOAT2 *component_diff_x_prev)
 void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int maxiter, FLOAT umbral, int step_check, int *in_iter)
 {
     int iter = 0;
-    FLOAT2 alpha, beta, rho, tau, tol;
+    FLOAT2 alpha, beta;
+	FLOAT2 rho; // rho = r(k-1)^Tz(k-1)
+	FLOAT2 tau; // tau = r(k)^Tz(k)
+	FLOAT2 tol; // tol = ||r(k)||v2
+	const DOUBLE eps = pow(2.0, -52.0);
+	const int check_freq = step_check/10;
+	const double switchgrad = 2;
 
-	int initial_full_iter_limit = -1;
+	// x(0) = [0, 0, .., 0]
 
-    FLOAT *r = ALLOC(FLOAT, n);     FLOAT *r_old = CALLOC(FLOAT, n);
-    FLOAT *p = ALLOC(FLOAT, n);
+    FLOAT *r = ALLOC(FLOAT, n);
+    FLOAT *p = ALLOC(FLOAT, n); // this may be the actual "conjugate gradient" (conjugate vectors)
     FLOAT *z = ALLOC(FLOAT, n);
+	// FLOAT *w = ALLOC(FLOAT, n);
 
     FLOAT *tr = ALLOC(FLOAT, n);
 
-    floatm_mult(A, x, r); // r = Ax
-    floatm_xpby(n, b, -1.0, r); // r0 = b - Ax
-    floatm_copy(n, r, r_old);
+	/* FLOAT *x_prev = ALLOC(FLOAT, n);
+	floatm_copy(n, x, x_prev);
+
+	FLOAT2 *component_diff_x_cur = CALLOC(FLOAT2, n);
+	FLOAT2 *component_diff_x_prev = CALLOC(FLOAT2, n); */
+
+	/* FLOAT *c = ALLOC(FLOAT, n);
+	FLOAT *cphi = ALLOC(FLOAT, n);
+
+	FLOAT *t1 = ALLOC(FLOAT, n);
+	FLOAT *t2 = ALLOC(FLOAT, n);
+
+	int *tcond = ALLOC(int, n); */
+
+	// r(0) = b - Ax(0)
+    floatm_mult(A, x, r);
+    floatm_xpby(n, b, -1.0, r);
 
     if (M) {
-        floatm_mult(M, r, p);
-        rho = floatm_dot(n, r, p);
-        tol = floatm_norm2(n, r);
+		// Mz(0) = r(0)
+        floatm_mult(M, r, z);
+		// calculate rho
+        rho = floatm_dot(n, r, z);
+		// calculate tol
+		tol = floatm_norm2(n, r);
     } else { // small optimization
-        floatm_copy(n, r, p);
+		// z(0) = r(0)
+        floatm_copy(n, r, z);
+		// rho = r(0)^Tr(0)
         rho = floatm_dot(n, r, r);
-        tol = sqrt(rho);
+        // tol = sqrt(rho)
+		tol = sqrt(rho);
     }
+	// p(1) = z(0)
+	floatm_copy(n, z, p);
 
     int step = 0;
-    FLOAT2 residual = tol, prev_residual = tol;
+    FLOAT2 residual = tol;
 
     while ((iter < maxiter) && (tol > umbral)) {
-        // alpha = (r,z) / (Ap,p)
-        // for (int i = 0; i < n; i++) p[i] = double(p[i]);
-        floatm_mult(A, p, z); // z = Ap
+		// w = Ap(k+1)
+		floatm_mult(A, p, z);
 
-        // compute true residual
-        if (step < step_check) step++;
-        else {
-            floatm_mult(A, x, tr); // tr = Ax
-            floatm_xpby(n, b, -1.0, tr); // tr = b - Ax
-            residual = floatm_norm2(n, tr);
-
-            // FLOAT2 residual_diff = prev_residual - residual;
-            // printf("res_def=%e\n", residual_diff);
-            // // printf("sqrt(res_diff)=%e\n", sqrt(residual_diff));
-            // prev_residual = residual;
-
-            // if(!A->useTail && residual_diff < AdaptivePrecisionBound) {
-            //     printf("---- switch pres at iter=%d , res=%e, res_diff=%e", *in_iter, residual, residual_diff);
-            //     mat_switch(A);
-            // }
-
-            printf("# rescheck: total_cg_iter=%d current_iter=%d tol=%e resid=%e\n", *in_iter, iter, (double)tol, (double)residual);
-            if (residual / tol > 10) {
-                break;
-            }
-            step = 1;
-        }
-
-        alpha = rho / floatm_dot(n, z, p);
-        
-        // x = x + alpha * p
-        floatm_axpy(n, alpha, p, x);
-        
-        // r = r - alpha * Ap
-        floatm_axpy(n, -alpha, z, r);
-
-        // this r may be what you're looking for
-        // above is the last place where r is modified
-        // so here you could check some form of rold/rnew
-        // though, that's basically what the step-check residual is..
-        // if(step > (step_check - 1)) {
-        //     FLOAT2 res_diff = 1.0/sqrt(floatm_dot(n, r, r_old));
-        //     printf("iter=%d, res_diff=%e\n", *in_iter, res_diff);
-        //     floatm_copy(n, r, r_old);
-
-        //     if(res_diff < AdaptivePrecisionBound) mat_switch(A);
-        // }
-
-        // apply preconditioner
-        if (M) {
-            floatm_mult(M, r, z);
-            tau = floatm_dot(n, r, z);
-            tol = floatm_norm2(n, r);
-        } else {
-            tau = floatm_dot(n, r, r);
-            tol = sqrt(tau);
-        }
-        // beta = (r,z) / rho
-        beta =  tau / rho;
-        rho = tau;
-        // p = z + beta * p
-        if (M) floatm_xpby(n, z, beta, p);
-        else floatm_xpby(n, r, beta, p);
-        iter++;
-        (*in_iter)++;
-        /* printf ("%d %d %d %e %e\n", *in_iter, iter, bits, (double)tol, (double)residual);
-        printf("alpha %e %e\n", alpha.value(), alpha.error());
-        printf("beta %e %e\n", beta.value(), beta.error());
-        printf("rho %e %e\n", rho.value(), rho.error());
-        printf("tau %e %e\n", tau.value(), tau.error()); */
-
-		if(*in_iter == initial_full_iter_limit) {
-			printf("reduced precision after %d iterations\n", *in_iter);
-			mat_reduce_precision(A);
+		if (step < step_check) {
+			step++;
 		}
-    }
+		else {
+			floatm_mult(A, x, tr);		 // tr = Ax
+			floatm_xpby(n, b, -1.0, tr); // tr = b - Ax
+			residual = floatm_norm2(n, tr);
+			printf("# rescheck: total_cg_iter=%d current_iter=%d tol=%e resid=%e\n", *in_iter, iter, (double)tol, (double)residual);
 
-    FREE(r);            FREE(r_old);
+			double res_over_tol = residual/tol;
+
+			if(!A->useTail && (res_over_tol > switchgrad)) 
+				mat_increase_precision(A);
+
+			printf("%d: %e\n", *in_iter, residual);
+
+			if (res_over_tol > 10) {
+				break;
+			}
+			step = 1;
+		}
+
+		// alpha(k+1) = rho / p(k+1)w
+		alpha = rho / floatm_dot(n, z, p);
+
+		// x(k+1) = x + alpha(k+1)p(k+1)
+		floatm_axpy(n, alpha, p, x);
+
+		// r(k+1) = r(k) - alpha(k+1)(w)
+		floatm_axpy(n, -alpha, z, r);
+
+		// printf("|r(i)|^2 = [");
+		// for(int i = 0; i < n; i++)
+		// 	printf("%e ", r[i]*r[i]);
+		// printf("]\n");
+
+		// apply preconditioner
+		if (M) {
+			// Solve Mz(k) = r(k)
+		    floatm_mult(M, r, z);
+			// calculate tau
+		    tau = floatm_dot(n, r, z);
+			// calculate tol
+		    tol = floatm_norm2(n, r);
+		} else {
+			// tau = inner product(r)
+		    tau = floatm_dot(n, r, r);
+			// tol = sqrt(tau)
+		    tol = sqrt(tau);
+		}
+		
+		// beta = tau / rho
+		beta =  tau / rho;
+		// update r(k-1)^Tz(k-1) to r(k)^Tz(k)
+		rho = tau;
+		
+		// p(k+1) = z(k) + beta(k) + p(k)
+		if (M) {
+			floatm_xpby(n, z, beta, p);
+		}
+		else {
+			floatm_xpby(n, r, beta, p);
+		}
+
+		// if((iter % check_freq) == 0) {
+		// 	floatm_max_abs_diff(n, x, x_prev, component_diff_x_cur, eps);
+		// 	// floatm_ratio(n, x, x_prev, component_ratio_x);
+
+		// 	FLOAT2 min_abs_diff = __DBL_MAX__;
+		// 	for(int i = 0; i < n; i++)
+		// 		if(min_abs_diff > component_diff_x_cur[i]) min_abs_diff = component_diff_x_cur[i];
+
+		// 	if(min_abs_diff <= AdaptivePrecisionBound)
+		// 		mat_increase_precision(A);
+
+		// 	vector_copy(n, component_diff_x_cur, component_diff_x_prev);
+		// }
+		// update x vector
+		// floatm_copy(n, x, x_prev);
+		
+		iter++;
+		(*in_iter)++;
+	}
+
+    FREE(r);
     FREE(p);
     FREE(z);
     FREE(tr);
+	// FREE(w);
+	// FREE(x_prev); FREE(component_diff_x_prev);
 }
