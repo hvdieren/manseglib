@@ -114,6 +114,8 @@ struct matrix_csr { struct matrix super; int *i; int *j; DOUBLE *A; };
 
 void csr_dmult(struct matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int k = 0; k < mat->super.n; k++) {
         DOUBLE t = 0.0;
         for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
@@ -124,6 +126,8 @@ void csr_dmult(struct matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 
 void csr_smult(struct matrix_csr *mat, FLOAT *x, FLOAT *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int k = 0; k < mat->super.n; k++) {
         FLOAT2 t = 0.0;
         for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
@@ -165,6 +169,8 @@ struct matrix_dense { struct matrix super; DOUBLE *A; };
 
 void dense_dmult(struct matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int i = 0; i < mat->super.n; i++) {
         DOUBLE t = 0.0;
         for (int j = 0; j < mat->super.n; j++)
@@ -175,6 +181,8 @@ void dense_dmult(struct matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 
 void dense_smult(uint8_t m, struct matrix_dense *mat, FLOAT *x, FLOAT *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int i = 0; i < mat->super.n; i++) {
         FLOAT2 t = 0.0;
         for (int j = 0; j < mat->super.n; j++)

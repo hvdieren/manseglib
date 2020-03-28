@@ -95,8 +95,10 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
 
 			double res_over_tol = residual/tol;
 
-			if(!A->useTail && (res_over_tol > switchgrad)) 
+			if(!A->useTail && (res_over_tol > switchgrad)) {
+				printf("switched at %d iter\n", *in_iter);
 				mat_increase_precision(A);
+			}
 
 			printf("%d: %e\n", *in_iter, residual);
 

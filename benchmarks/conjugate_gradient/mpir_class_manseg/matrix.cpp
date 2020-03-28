@@ -115,6 +115,8 @@ double coo_max_nz(int n, int nz, matrix_coo *coo)
 // CSR matrix
 void csr_dmult_heads(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int k = 0; k < mat->n; k++) {
         DOUBLE t = 0.0;
         for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
@@ -125,6 +127,8 @@ void csr_dmult_heads(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 
 void csr_dmult_full(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int k = 0; k < mat->n; k++) {
         DOUBLE t = 0.0;
         for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
@@ -135,6 +139,8 @@ void csr_dmult_full(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 
 void csr_smult_heads(matrix_csr *mat, FLOAT *x, FLOAT *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int k = 0; k < mat->n; k++) {
         FLOAT2 t = 0.0;
         for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
@@ -145,6 +151,8 @@ void csr_smult_heads(matrix_csr *mat, FLOAT *x, FLOAT *y)
 
 void csr_smult_full(matrix_csr *mat, FLOAT *x, FLOAT *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int k = 0; k < mat->n; k++) {
         FLOAT2 t = 0.0;
         for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
@@ -213,6 +221,8 @@ matrix *csr_create(int n, int nz, matrix_coo *coo)
 // dense matrix
 void dense_dmult_heads(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int i = 0; i < mat->n; i++) {
         DOUBLE t = 0.0;
         for (int j = 0; j < mat->n; j++)
@@ -223,6 +233,8 @@ void dense_dmult_heads(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 
 void dense_dmult_full(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int i = 0; i < mat->n; i++) {
         DOUBLE t = 0.0;
         for (int j = 0; j < mat->n; j++)
@@ -233,6 +245,8 @@ void dense_dmult_full(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 
 void dense_smult_heads(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int i = 0; i < mat->n; i++) {
         FLOAT2 t = 0.0;
         for (int j = 0; j < mat->n; j++)
@@ -243,6 +257,8 @@ void dense_smult_heads(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
 
 void dense_smult_full(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
 {
+	#pragma omp parallel for \
+		shared(mat, x, y)
     for (int i = 0; i < mat->n; i++) {
         FLOAT2 t = 0.0;
         for (int j = 0; j < mat->n; j++)
