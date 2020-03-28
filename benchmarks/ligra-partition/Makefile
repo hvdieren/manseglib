@@ -36,11 +36,11 @@ SWANRTDIR=../../cilk-swan
 #SWANRTDIR=$(HOME)/work/research/llvm
 #endif
 
-# PCC = $(SWANCCDIR)/clang++
-# PCFLAGS = -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) -I $(SWANRTDIR)/include -L $(SWANRTDIR)/lib -ldl
+PCC = $(SWANCCDIR)/clang++
+PCFLAGS = -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) -I $(SWANRTDIR)/include -L $(SWANRTDIR)/lib -ldl
 
-CXX = $(SWANCCDIR)/clang++
-CXXFLAGS = -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) -I $(SWANRTDIR)/include -L $(SWANRTDIR)/lib -ldl
+# CXX = $(SWANCCDIR)/clang++
+# CXXFLAGS = -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) -I $(SWANRTDIR)/include -L $(SWANRTDIR)/lib -ldl
 
 #PCFLAGS += -I./cilkpub_v105/include
 COMMON=papi_code.h utils.h IO.h parallel.h gettime.h quickSort.h parseCommandLine.h mm.h partitioner.h graph-numa.h ligra-numa.h
@@ -66,7 +66,7 @@ REUSEOPT += -DREUSE_DIST=0
 # OPT += -Wall -Wno-cilk-loop-control-var-modification
 
 % : %.C $(COMMON)
-	$(CXX) $(CXXFLAGS) $(CFLAGS) $(NUMAOPT) $(CLIDOPT) $(SEQOPT) $(OPT) $(CACHEOPT) -o $@ $< $(LIBS_I_NEED)
+	$(PCC) $(PCFLAGS) $(CFLAGS) $(NUMAOPT) $(CLIDOPT) $(SEQOPT) $(OPT) $(CACHEOPT) -o $@ $< $(LIBS_I_NEED)
 
 .PHONY : clean
 
