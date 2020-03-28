@@ -33,7 +33,7 @@
 #include <time.h>
 
 #define NB 512
-#define B 8
+#define B 32
 #define FALSE (0)
 #define TRUE (1)
 
@@ -47,7 +47,6 @@ typedef fp_type *binout;
 
 fp_type *A[NB][NB];
 fp_type *A_new[NB][NB];
-// fp_type *tmp[NB][NB];
 fp_type blockDelta[NB][NB];
 
 void alloc_and_genmat()
@@ -63,10 +62,9 @@ void alloc_and_genmat()
         {
             A[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
             A_new[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
-            // tmp[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
             
             blockDelta[ii][jj] = 0.0;
-            if (A[ii][jj] == NULL || A_new[ii][jj] == NULL)// || tmp[ii][jj] == NULL)
+            if (A[ii][jj] == NULL || A_new[ii][jj] == NULL)
             {
                 printf("Out of memory\n");
                 exit(1);
@@ -169,7 +167,7 @@ void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo, bin A, bin
 void compute(int niters)
 {
     int iters;
-    int ii, jj;
+    int ii, jj, i, j;
     fp_type lefthalo[B], tophalo[B], righthalo[B], bottomhalo[B];
 
     for (iters = 0; iters < niters; iters++)
@@ -202,19 +200,15 @@ void compute(int niters)
             } // jj
         } // ii
 
-        /* // tmp <---- A_new  (give temp new values)
-        memcpy(tmp, A_new, sizeof(fp_type)*NB*NB);
-        // A_new < ----- A  (give A_new old A values)
-        memcpy(A_new, A, sizeof(fp_type)*NB*NB);
-        // A <------ tmp    (A gets new values)
-        memcpy(A, tmp, sizeof(fp_type)*NB*NB); */
+        for(ii = 0; ii < NB; ++ii)
+			for(jj = 0; jj < NB; ++jj)
+				for(i = 0; i < B; ++i)
+					for(j = 0; j < B; ++j)
+						A[ii][jj][i * B + j] = A_new[ii][jj][i * B + j];
 
-        // copy instead of swap
-        for(int i = 0; i < NB; ++i)
-            for(int j = 0; j < NB; ++j)
-                for(int k = 0; k < B; ++k)
-                    for(int l = 0; l < B; ++l)
-                        A[i][j][k * B + l] = A_new[i][j][k * B + l];
+		// provided A has the same values as A_new at the end of the iteration,
+		// it does not matter what is left in A_new, since we are only assigning these values
+		// in the jacobi function
     } // iter
 }
 
@@ -240,40 +234,6 @@ int main(int argc, char *argv[])
     time_taken = (time_taken + (end.tv_nsec - start.tv_nsec)) * 1e-9;
 
     printf("Running time  = %g %s\n", time_taken, "s");
-
-    FILE *outFile;
-    outFile = fopen("./jacobi_up_values.txt", "w");
-    if (outFile == NULL)
-    {
-        fprintf(stderr, "Error writing to file\n");
-    }
-    else
-    {
-        int ii, jj, i, j;
-        for (ii = 0; ii < NB; ++ii)
-            for (jj = 0; jj < NB; ++jj)
-                for (i = 0; i < B; ++i)
-                    for (j = 0; j < B; ++j)
-                        fprintf(outFile, "%.15f\n", A[ii][jj][i * B + j]);
-
-        fclose(outFile);
-    }
-
-    // write out block deltas
-    outFile = fopen("./jacobi_up_deltas.txt", "w");
-    if (outFile == NULL)
-    {
-        fprintf(stderr, "Error writing to file\n");
-    }
-    else
-    {
-        int ii, jj, i, j;
-        for (ii = 0; ii < NB; ++ii)
-            for (jj = 0; jj < NB; ++jj)
-                fprintf(outFile, "%.15f\n", blockDelta[ii][jj]);
-
-        fclose(outFile);
-    }
     
     return 0;
 }

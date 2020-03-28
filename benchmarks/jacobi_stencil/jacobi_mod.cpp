@@ -37,7 +37,7 @@
 using namespace ManSeg;
 
 #define NB 512
-#define B 8
+#define B 32
 #define FALSE (0)
 #define TRUE (1)
 
@@ -67,7 +67,10 @@ void alloc_and_genmat()
         for (jj = 0; jj < NB; jj++)
         {
             A[ii][jj].alloc(B * B);
+			A[ii][jj].full = new double[B * B];
+
             A_new[ii][jj].alloc(B * B);
+			A_new[ii][jj].full = new double[B * B];
 
             blockDelta[ii][jj] = 0.0;
             for (i = 0; i < B; i++)
@@ -76,6 +79,7 @@ void alloc_and_genmat()
                 {
                     init_val = (3125 * init_val) % 65536;
                     A[ii][jj].pairs[i * B + j] = (fp_type)((init_val - 32768.0) / 16384.0);
+					A[ii][jj].full[i * B + j] = (fp_type)((init_val - 32768.0) / 16384.0);
                 }
             }
         }
@@ -110,7 +114,7 @@ void getlastrow(bin& A, vout v)
 {
     int j;
     for (j = 0; j < B; j++)
-        v[j] = A.pairs[(B - 1) * B + j];
+        v[j] = A.full[(B - 1) * B + j];
 }
 template<>
 void getlastrow<Precision::HEADS>(bin& A, vout v)
@@ -125,7 +129,7 @@ void getlastcol(bin& A, vout v)
 {
     int i;
     for (i = 0; i < B; i++)
-        v[i] = A.pairs[i * B + B - 1];
+        v[i] = A.full[i * B + B - 1];
 }
 template<>
 void getlastcol<Precision::HEADS>(bin& A, vout v)
@@ -140,7 +144,7 @@ void getfirstrow(bin& A, vout v)
 {
     int j;
     for (j = 0; j < B; j++)
-        v[j] = A.pairs[0 * B + j];
+        v[j] = A.full[0 * B + j];
 }
 template<>
 void getfirstrow<Precision::HEADS>(bin& A, vout v)
@@ -155,7 +159,7 @@ void getfirstcol(bin& A, vout v)
 {
     int i;
     for (i = 0; i < B; i++)
-        v[i] = A.pairs[i * B + 0];
+        v[i] = A.full[i * B + 0];
 }
 template<>
 void getfirstcol<Precision::HEADS>(bin& A, vout v)
@@ -178,19 +182,19 @@ void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo,
     {
         for (j = 0; j < B; j++)
         {
-            tmp = A.pairs[i * B + j];
-            left = (j == 0 ? lefthalo[j] : A.pairs[i * B + j - 1]);
-            top = (i == 0 ? tophalo[i] : A.pairs[(i - 1) * B + j]);
-            right = (j == B - 1 ? righthalo[i] : A.pairs[i * B + j + 1]);
-            bottom = (i == B - 1 ? bottomhalo[i] : A.pairs[(i + 1) * B + j]);
+            tmp = A.full[i * B + j];
+            left = (j == 0 ? lefthalo[j] : A.full[i * B + j - 1]);
+            top = (i == 0 ? tophalo[i] : A.full[(i - 1) * B + j]);
+            right = (j == B - 1 ? righthalo[i] : A.full[i * B + j + 1]);
+            bottom = (i == B - 1 ? bottomhalo[i] : A.full[(i + 1) * B + j]);
 
             fp_type deltaTmp = blockDelta;
-            fullResult = 0.2 * (A.pairs[i * B + j] + left + top + right + bottom);
-            A_new.pairs[i * B + j] = fullResult;
+            fullResult = 0.2 * (A.full[i * B + j] + left + top + right + bottom);
+            A_new.full[i * B + j] = fullResult;
 
             // record difference between full result and stored value
-            // blockDelta += std::fabs(fullResult - A_new.pairs[i * B + j])
-            fp_type y = std::fabs(fullResult - A_new.pairs[i * B + j]) + deltaErr;
+            // blockDelta += std::fabs(fullResult - A_new.full[i * B + j])
+            fp_type y = std::fabs(fullResult - A_new.full[i * B + j]) + deltaErr;
             
             blockDelta = deltaTmp + y;
             deltaErr = deltaTmp - blockDelta;
@@ -217,7 +221,7 @@ void jacobi<Precision::HEADS>(vin lefthalo, vin tophalo, vin righthalo, vin bott
             right = (j == B - 1 ? righthalo[i] : A.heads[i * B + j + 1]);
             bottom = (i == B - 1 ? bottomhalo[i] : A.heads[(i + 1) * B + j]);
 
-            // A_new.pairs[i * B + j] = 0.2 * (A.pairs[i * B + j] + left + top + right + bottom);
+            // A_new.full[i * B + j] = 0.2 * (A.full[i * B + j] + left + top + right + bottom);
             
             fullResult = 0.2 * (A.heads[i * B + j] + left + top + right + bottom);
             A_new.heads[i * B + j] = fullResult;
@@ -232,6 +236,17 @@ void jacobi<Precision::HEADS>(vin lefthalo, vin tophalo, vin righthalo, vin bott
             deltaErr += y;
         }
     }
+
+	if(blockDelta > MaxSingleSegmentPrecision)
+	{
+		for (i = 0; (i < B); i++)
+    	{
+			for (j = 0; j < B; j++)
+			{
+				A_new.full[i * B + j] = A_new.heads[i * B + j];
+			}
+		}
+	}
 }
 
 void compute(int niters)
@@ -239,7 +254,7 @@ void compute(int niters)
     int iters;
     int ii, jj;
     fp_type lefthalo[B], tophalo[B], righthalo[B], bottomhalo[B];
-
+	
     for (iters = 0; iters < niters; iters++)
     {
         for (ii = 0; ii < NB; ii++)
@@ -274,15 +289,28 @@ void compute(int niters)
             } // jj
         } // ii
 
-        // std::swap(A, A_new);
-
-        // copy instead of swap..
-        // using pairs is slow, so we want to avoid using if we don't need to.
         for(int i = 0; i < NB; ++i)
-            for(int j = 0; j < NB; ++j)     // for these inner two loops we could split out into a separate funciton
-                for(int k = 0; k < B; ++k)  // if blockDelta[i][j] > MaxSingle, then do pairs (or full) 
-                    for(int l = 0; l < B; ++l)
-                        A[i][j].pairs[k * B + l] = A_new[i][j].pairs[k * B + l];
+		{
+			for(int j = 0; j < NB; ++j)     // for these inner two loops we could split out into a separate funciton
+            {
+				if(blockDelta[i][j] > MaxSingleSegmentPrecision)
+				{
+					for(int k = 0; k < B; ++k)  // if blockDelta[i][j] > MaxSingle, then do pairs (or full) 
+						for(int l = 0; l < B; ++l)
+							A[i][j].full[k * B + l] = A_new[i][j].full[k * B + l];
+				}
+				else
+				{
+					for(int k = 0; k < B; ++k)  // if blockDelta[i][j] > MaxSingle, then do pairs (or full) 
+						for(int l = 0; l < B; ++l)
+							A[i][j].heads[k * B + l] = A_new[i][j].heads[k * B + l];
+				}
+			}
+		}
+		// provided A has the same values as A_new at the end of the iteration,
+		// it does not matter what is left in A_new, since we are only assigning these values
+		// in the jacobi function
+            
     } // iter
 }
 
@@ -309,39 +337,6 @@ int main(int argc, char *argv[])
 
     printf("Running time  = %g %s\n", time_taken, "s");
 
-    FILE *outFile;
-    outFile = fopen("./jacobi_mod_values.txt", "w");
-    if (outFile == NULL)
-    {
-        fprintf(stderr, "Error writing to file\n");
-    }
-    else
-    {
-        int ii, jj, i, j;
-        for (ii = 0; ii < NB; ++ii)
-            for (jj = 0; jj < NB; ++jj)
-                for (i = 0; i < B; ++i)
-                    for (j = 0; j < B; ++j)
-                        fprintf(outFile, "%.15f\n", (double)(A[ii][jj].pairs[i * B + j]));
-
-        fclose(outFile);
-    }
-    
-    // write out block deltas
-    outFile = fopen("./jacobi_mod_deltas.txt", "w");
-    if (outFile == NULL)
-    {
-        fprintf(stderr, "Error writing to file\n");
-    }
-    else
-    {
-        int ii, jj, i, j;
-        for (ii = 0; ii < NB; ++ii)
-            for (jj = 0; jj < NB; ++jj)
-                fprintf(outFile, "%.15f\n", blockDelta[ii][jj]);
-
-        fclose(outFile);
-    }
-
+   
     return 0;
 }
