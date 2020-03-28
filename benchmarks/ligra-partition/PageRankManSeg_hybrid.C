@@ -23,7 +23,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ligra-numa.h"
 #include "math.h"
-#include "mantissaSegmentation_dev.hpp"
+#include "../../mantissaSegmentation_dev.hpp"
 
 using namespace ManSeg;
 
@@ -444,11 +444,6 @@ void Compute(GraphType &GA, long start)
 
     partitioned_vertices Frontier = partitioned_vertices::bits(part,n, m);
 
-    double virtual_mem, resident_set_size;
-    process_mem_usage(virtual_mem, resident_set_size);
-    printf("\nusage before heads iterations\n");
-    printf("virtual_mem=%.2fMB | resident_set_size (RAM usage)=%.2f\n", virtual_mem, resident_set_size);
-
     cerr << setprecision(16);
     while(count<MaxIter) // heads only
     {
@@ -523,28 +518,16 @@ void Compute(GraphType &GA, long start)
 
         cerr << count << ": delta = " << delta << "  xnorm = " << sumArray<PairsArray>(part, p_curr.pairs, n) << "\n";
     }
-
-    // implement as extra step for the moment
-    process_mem_usage(virtual_mem, resident_set_size);
-    printf("\nusage after heads + interim\n");
-    printf("virtual_mem=%.2fMB | resident_set_size (RAM usage)=%.2f\n", virtual_mem, resident_set_size);
     
     // we don't actually need to copy across p_next since it was just zeroed
     p_next.del_segments(); // free half memory
 
     p_curr.full = new double[partElem];
     loop(j, part, perNode, p_curr.full[j] = p_curr.pairs[j]);
-    process_mem_usage(virtual_mem, resident_set_size);
-    printf("\nusage after curr copy\n");
-    printf("virtual_mem=%.2fMB | resident_set_size (RAM usage)=%.2f\n", virtual_mem, resident_set_size);
 
     // fill p_next
     p_next.full = new double[partElem];
     loop(j, part, perNode, p_next.full[j] = 0.0);
-
-    process_mem_usage(virtual_mem, resident_set_size);
-    printf("\nusage after next copy\n");
-    printf("virtual_mem=%.2fMB | resident_set_size (RAM usage)=%.2f\n", virtual_mem, resident_set_size);
 
     while(count<MaxIter) // full precision
     {
