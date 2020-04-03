@@ -9,6 +9,10 @@ benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Release/
 cilk-swan/
 llvm-clang/
 graphs/
+benchmarks/ALT_ligra-master/
+snap_graphs/
+cilktools-linux-004501/
+
 
 ##  files  ##
 *.o
@@ -19,6 +23,7 @@ graphs/
 *.pr_vals
 *.png
 *.asm
+cilktools-linux-004501.tgz
 
 ##  binaries  ##
 
