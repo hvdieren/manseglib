@@ -3,11 +3,6 @@
 
 #include <stdint.h>
 #include <immintrin.h>
-#include <unistd.h>
-#include <ios>
-#include <iostream>
-#include <fstream>
-#include <string>
 
 namespace ManSeg
 {
@@ -15,8 +10,9 @@ namespace ManSeg
     typedef uint_fast64_t doublerep;
 
     /* Highest achievable precision with a single segment - i.e. TwoSegArray<false> */
-    constexpr double MaxSingleSegmentPrecision = 1e-5;
-    /* decimal precision: num_mantissa_bits*log10(2) = 6.02... */
+    constexpr double MaxSingleSegmentPrecision = 1e-6;
+    /* decimal precision: num_mantissa_bits*log10(2) = 6~ */
+	/* so we have approximately 6 digits of decimal precision */
     constexpr double AdaptivePrecisionBound = 5e-5;
 
     /*
@@ -25,7 +21,7 @@ namespace ManSeg
         It contains the sign bit, full 11 bit exponent, and 20 bits of mantissa, for a total
         of 32 bits.
         This gives less precision than IEEE-754 standard float.
-        It has a maximum precision of roughly 1e-5, with a recommended precision bound of 5e-5.
+        It has a maximum precision of roughly 1e-6, with a recommended precision bound of 1.5e-6.
     */
     class Head
     {
@@ -70,8 +66,6 @@ namespace ManSeg
         }
 
         float* head;
-        static constexpr int segmentBits = 32;
-        static constexpr __m128i head_mask = {(int_fast64_t)(0xFFFFFFFF00000000), (int_fast64_t)(0x0000000000000000)};
     };
 
     /*
@@ -118,9 +112,6 @@ namespace ManSeg
 
         float* head;
         float* tail;
-        static constexpr int segmentBits = 32;
-        static constexpr __m128i head_mask = {(int_fast64_t)(0xFFFFFFFF00000000), (int_fast64_t)(0x0000000000000000)};
-        // static constexpr __m128i lower_64_mask = {(int_fast64_t)(0xFFFFFFFFFFFFFFFF), (int_fast64_t)(0x0000000000000000)};
     };
 
     /*
@@ -244,9 +235,6 @@ namespace ManSeg
         {
             heads = new float[length];
             tails = new float[length] (); // initially zero tails array
-
-            ++heads;
-            ++tails;
         }
 
         TwoSegArray(float* heads, float* tails)
@@ -262,10 +250,6 @@ namespace ManSeg
         template<typename T>
         void set(const uint_fast64_t& id, const T& t)
         {
-            // double d = t;
-            // float *pd = (float*)&d;
-            // __m128 d_v = _mm_load_ss(pd + 1);
-            // _mm_store_ss(&heads[id], d_v);
             double d = t;
             __m128d d_v = _mm_set_pd(0.0, d);
             __m128 seg_v = _mm_castpd_ps(d_v);
@@ -324,10 +308,6 @@ namespace ManSeg
     private:
         float* heads;
         float* tails;
-
-        static constexpr int segmentBits = 32;
-        static constexpr uint32_t tailMask = ~0;
-        static constexpr doublerep headMask = static_cast<doublerep>(tailMask) << segmentBits;
     };
 
 
@@ -370,26 +350,16 @@ namespace ManSeg
         __m128d d_v = _mm_set_pd(0.0, d);
         __m128 seg_v = _mm_castpd_ps(d_v);
         *head = seg_v[1];
-
-        // double d = other;
-        // __m128 f_v = _mm_loadu_ps(reinterpret_cast<float*>(&d) + 1);
-        // _mm_store_ss(&head, f_v);
-
         return *this;
     }
 
     template<typename T>
     inline Head& Head::operator=(const T&& other) noexcept
     {
-        // double d = other;
-        // float *pd = (float*)&d;
-        // __m128 d_v = _mm_load_ss(pd + 1);
-        // _mm_store_ss(head, d_v);
         double d = other;
         __m128d d_v = _mm_set_pd(0.0, d);
         __m128 seg_v = _mm_castpd_ps(d_v);
         *head = seg_v[1];
-
         return *this;
     }
 
@@ -502,7 +472,6 @@ namespace ManSeg
         __m128 seg_v = _mm_castpd_ps(d_v);
         *tail = seg_v[0];
         *head = seg_v[1];
-
         return *this;
     }
 
@@ -514,7 +483,6 @@ namespace ManSeg
         __m128 seg_v = _mm_castpd_ps(d_v);
         *tail = seg_v[0];
         *head = seg_v[1];
-
         return *this;
     }
 
