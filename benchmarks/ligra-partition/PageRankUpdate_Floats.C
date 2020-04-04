@@ -40,12 +40,12 @@ struct PR_F
         p_curr(_p_curr), p_next(_p_next), damping(_damping), V(_V) {}
     inline bool update(intT s, intT d)  //update function applies PageRank equation
     {
-        p_next[d] += (damping*p_curr[s]/V[s].getOutDegree());
+        p_next[d] += damping*(p_curr[s]/V[s].getOutDegree());
         return 1;
     }
     inline bool updateAtomic (intT s, intT d)   //atomic Update
     {
-        writeAdd(&p_next[d], (damping*p_curr[s]/V[s].getOutDegree()));
+        writeAdd(&p_next[d], damping*(p_curr[s]/V[s].getOutDegree()));
         return 1;
     }
 
@@ -55,7 +55,7 @@ struct PR_F
     }
     inline bool update(cache_t &cache, intT s)
     {
-        cache.p_next += (damping*p_curr[s]/V[s].getOutDegree());
+        cache.p_next += damping*(p_curr[s]/V[s].getOutDegree());
         return 1;
     }
 
@@ -193,39 +193,39 @@ void Compute(GraphType &GA, long start)
     p_next.part_allocate (part);
 
     double delta = 2.0;
-    int count=0;
-
     loop(j, part, perNode, p_curr[j] = one_over_n);
-    loop(j, part, perNode, p_next[j] = 0.0);
+    loop(j, part, perNode, p_next[j] = 0.f);
+    
+	cerr << setprecision(16);
 
+    int count=0;
     partitioned_vertices Frontier = partitioned_vertices::bits(part,n, m);
-
-    cerr << setprecision(16);
     while(count<MaxIter)
     {
-        // power method step (main page rank step)
-        partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex>(p_curr,p_next,damping,WG.V),m/20);
-        
-        // calculate current sum of new pageranks (will sum to < 1)
-        float newPrSum = sumArray(part, p_next, n);
-        // find scaling value to ensure new pageranks sum to 1
-        float w = (1.0 - newPrSum)*one_over_n;
-        // scale values
-        loop(j, part, perNode, p_next[j] += w);
-
-        // calculate delta value between current and new pageranks
-        delta = normDiff(part, p_curr, p_next, n);
         ++count;
 
-        cerr << count << ": delta = " << delta << "  xnorm = " << sumArray(part, p_next, n) << "\n";
+        // p_next[d] += damping * (p_curr[s]/V[s].getOutDegree())
+        partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex>(p_curr,p_next,damping,WG.V),m/20);
+        
+        // find value to scale PR vals by to make vector add to 1
+		float scaleAdditive = (1 - sumArray(part, p_next, n))*one_over_n;
+		{
+			loop(j, part, perNode, p_next[j] += scaleAdditive);
+		}
+
+        // delta = abs(p_curr - p_next)
+        delta = normDiff(part, p_curr, p_next, n);
         if(delta < epsilon)
         {
             cerr << "successfully converged\n";
             break;
         }
+        cerr << count << ": delta = " << delta << "  xnorm = " << sumArray(part, p_next, n) << "\n";
 
         // reset p_curr and swap vertices
-        vertexMap(part, Frontier,PR_Vertex_Reset(p_curr));
+		{
+			loop(j, part, perNode, p_curr[j] = 0);
+		}
         swap(p_curr, p_next);
         // manage fronteir stuff
         Frontier.del();

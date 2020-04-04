@@ -24,9 +24,7 @@
 #include "ligra-numa.h"
 #include "math.h"
 #include "../../mantissaSegmentation_dev.hpp"
-
 using namespace ManSeg;
-
 int MaxIter=100;
 template<class vertex, class ArrayType>
 struct PR_F
@@ -45,7 +43,7 @@ struct PR_F
         p_curr(_p_curr), p_next(_p_next), damping(_damping), V(_V) {}
     inline bool update(intT s, intT d)  //update function applies PageRank equation
     {
-        p_next[d] += (damping*p_curr[s]/V[s].getOutDegree());
+        p_next[d] += damping*(p_curr[s]/V[s].getOutDegree());
         return 1;
     }
     inline bool updateAtomic (intT s, intT d)   //atomic Update
@@ -77,7 +75,7 @@ struct PR_F
     }
     inline bool update(cache_t &cache, intT s)
     {
-        cache.p_next += (damping*p_curr[s]/V[s].getOutDegree());
+        cache.p_next += damping*(p_curr[s]/V[s].getOutDegree());
         return 1;
     }
 
@@ -109,12 +107,12 @@ struct PR_F_d
         p_curr(_p_curr), p_next(_p_next), damping(_damping), V(_V) {}
     inline bool update(intT s, intT d)  //update function applies PageRank equation
     {
-        p_next[d] += (damping*p_curr[s]/V[s].getOutDegree());
+        p_next[d] += damping*(p_curr[s]/V[s].getOutDegree());
         return 1;
     }
     inline bool updateAtomic (intT s, intT d)   //atomic Update
     {
-        writeAdd(&p_next[d], (damping*p_curr[s]/V[s].getOutDegree()));
+        writeAdd(&p_next[d], damping*(p_curr[s]/V[s].getOutDegree()));
         return 1;
     }
 
@@ -124,7 +122,7 @@ struct PR_F_d
     }
     inline bool update(cache_t &cache, intT s)
     {
-        cache.p_next += (damping*p_curr[s]/V[s].getOutDegree());
+        cache.p_next += damping*(p_curr[s]/V[s].getOutDegree());
         return 1;
     }
 
@@ -140,16 +138,11 @@ struct PR_F_d
     }
 };
 
-/*
-    TODO: remove template, take in static types HeadsArray (curr) PairsArray (next)
-
-    ** need to do in all PageRankManSeg* files **
-*/
-template<class vertex, class ArrayType>
+template<class vertex>
 struct PR_Interim_F
 {
-    ArrayType& p_curr;
-    ArrayType& p_next;
+    HeadsArray& p_curr;
+    double* p_next;
     double damping;
     vertex* V;
     static const bool use_cache = true;
@@ -158,11 +151,11 @@ struct PR_Interim_F
     {
         double p_next;
     };
-    PR_Interim_F(ArrayType& _p_curr, ArrayType& _p_next, double _damping, vertex* _V) :
+    PR_Interim_F(HeadsArray& _p_curr, double* _p_next, double _damping, vertex* _V) :
         p_curr(_p_curr), p_next(_p_next), damping(_damping), V(_V) {}
     inline bool update(intT s, intT d)  //update function applies PageRank equation
     {
-        p_next.setPair(d, (p_next[d] + (damping*p_curr[s]/V[s].getOutDegree())));
+        p_next[d] += damping*(p_curr[s]/V[s].getOutDegree());
         return 1;
     }
     inline bool updateAtomic (intT s, intT d)   //atomic Update
@@ -184,7 +177,7 @@ struct PR_Interim_F
         } while((!CAS(&p_next[d].head, oh, nh) || !CAS(&p_next[d].tail, ot, nt)) && (p_next[d] != next)); */
 
         cerr << "updateAtomic not implemented for ManSeg type.. yet\n";
-        abort();
+        // abort();
         return 1;
     }
 
@@ -194,7 +187,7 @@ struct PR_Interim_F
     }
     inline bool update(cache_t &cache, intT s)
     {
-        cache.p_next += (damping*p_curr[s]/V[s].getOutDegree());
+        cache.p_next += damping*(p_curr[s]/V[s].getOutDegree());
         return 1;
     }
 
@@ -327,6 +320,49 @@ double normDiff(const partitioner &part, ArrayType& a, ArrayType& b, intT n)
     return d;
 }
 
+double interim_seqnormdiff(HeadsArray& a, double* b, intT s, intT e)
+{
+    double d = 0.;
+    double err = 0.;
+    for( intT i=s; i < e; ++i ) 
+    {
+        //The code does d += fabs(a[i]- b[i]);
+        // but does so with high accuracy
+        double tmp = d;
+        double y = fabs(a[i] - b[i]) + err;
+        d = tmp + y;
+        err = tmp - d;
+        err += y;
+    }
+    return d;
+}
+double interim_normDiff(const partitioner &part, HeadsArray& a, double* b, intT n)
+{
+    double d = 0.;
+    int p= part.get_num_partitions();
+    double *psum = new double [p];
+    double err = 0.;
+    double tmp, y;
+    /*calculate sum per partitions*/
+    map_partition( k, part, {
+        intT s = part.start_of(k);
+        intT e = part.start_of(k+1);
+        psum[k] = interim_seqnormdiff( a, b, s, e);
+    } );
+
+    for( int i=0; i < p; ++i ) 
+    {
+        // does d += psum[i]; but with high accuracy
+        tmp = d;
+        y = psum[i] + err;
+        d = tmp + y;
+        err = tmp - d;
+        err += y;
+    }
+    delete [] psum;
+    return d;
+}
+
 // double version
 double seqnormdiff(double* a, double* b, intT n)
 {
@@ -427,44 +463,47 @@ void Compute(GraphType &GA, long start)
     //x and y to do special allocation
     //frontier also need special node allocation
     //blocksize equal to the szie of each partitioned
-    double one_over_n = 1.0/(double)n;
+    double one_over_n = 1/(double)n;
 
-    // // define nicer types
-    // using HeadsArray = ManSeg::TwoSegArray<false>;
-    // using PairsArray = ManSeg::TwoSegArray<true>;
-    // use combined conveniencetype
     ManSegArray p_curr(partElem);
     ManSegArray p_next(partElem);
+	// alloc full
+    p_curr.full = new double[partElem];
+    p_next.full = new double[partElem];
 
     double delta = 2.0;
-    int count=0;
-
     loop(j, part, perNode, p_curr.heads[j] = one_over_n);
     loop(j, part, perNode, p_next.heads[j] = 0.0);
-
-    partitioned_vertices Frontier = partitioned_vertices::bits(part,n, m);
-
+	loop(j, part, perNode, p_next.full[j] = 0.0);
     cerr << setprecision(16);
+
+    int count=0;
+    partitioned_vertices Frontier = partitioned_vertices::bits(part,n, m);
     while(count<MaxIter) // heads only
     {
-        // power method step (main page rank step)
-        partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex, HeadsArray>(p_curr.heads,p_next.heads,damping,WG.V),m/20);
-       
-        // calculate current sum of new pageranks (will sum to < 1)
-        double nextPrSum = sumArray<HeadsArray>(part, p_next.heads, n);
-        // find scaling value to ensure new pageranks sum to 1
-        double w = (1.0 - nextPrSum)*one_over_n;
-       
-        // scale values
-        loop(j, part, perNode, p_next.heads[j] += w);
-        
-        // calculate delta value between current and new pageranks
-        delta = normDiff<HeadsArray>(part, p_curr.heads, p_next.heads, n);
         ++count;
 
+        // p_next[d] += damping * (p_curr[s]/V[s].getOutDegree())
+        partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex, HeadsArray>(p_curr.heads,p_next.heads,damping,WG.V),m/20);
+       
+        // find value to scale PR vals by to make vector add to 1
+        double scaleAdditive = (1 - sumArray<HeadsArray>(part, p_next.heads, n))*one_over_n;
+        {
+			loop(j, part, perNode, p_next.heads[j] += scaleAdditive);
+		}
+
+        // delta = abs(p_curr - p_next)
+        delta = normDiff<HeadsArray>(part, p_curr.heads, p_next.heads, n);
+
         // reset p_curr and swap vertices
-        vertexMap(part, Frontier,PR_Vertex_Reset<HeadsArray>(p_curr.heads));
-        swap(p_curr,p_next);
+        {
+			loop(j, part, perNode, p_curr.heads[j] = 0);
+		}
+		// swap parts manually
+		// not doing so causes segmentation fault
+        swap(p_curr.heads,p_next.heads);
+        swap(p_curr.pairs,p_next.pairs);
+        swap(p_curr.full,p_next.full);
         // manage frontier stuff
         Frontier.del();
         Frontier = output;
@@ -473,7 +512,7 @@ void Compute(GraphType &GA, long start)
         // ensure swap & reset happens *before* breaking from loop
         if(delta < ManSeg::AdaptivePrecisionBound)
         {   
-            cerr << "-- hit limit of single segment --\n";
+            cerr << "switching precision at iteration: " << count << "\n";
             break;
         }
     }
@@ -493,76 +532,71 @@ void Compute(GraphType &GA, long start)
            the floating point representation is “cut”, which leads to a
            rounding towards zero. This, in turn, leads to ||p^k|| < 1
     */
-   {
-        // power method step (main page rank step)
-        partitioned_vertices output = edgeMap(GA, Frontier, PR_Interim_F<vertex, HeadsArray>(p_curr.heads,p_next.heads,damping,WG.V),m/20);
-       
-        // calculate current sum of new pageranks (will sum to < 1)
-        double nextPrSum = sumArray<PairsArray>(part, p_next.pairs, n);
-        // find scaling value to ensure new pageranks sum to 1
-        double w = (1.0 - nextPrSum)*one_over_n;
-       
-        // scale values
-        loop(j, part, perNode, p_next.pairs[j] += w);
-        
-        // calculate delta value between current and new pageranks
-        delta = normDiff<PairsArray>(part, p_curr.pairs, p_next.pairs, n);
+	if(count < MaxIter)
+    {
         ++count;
+
+        // p_next[d] += damping * (p_curr[s]/V[s].getOutDegree())
+        partitioned_vertices output = edgeMap(GA, Frontier, PR_Interim_F<vertex>(p_curr.heads,p_next.full,damping,WG.V),m/20);
+       
+        // find value to scale PR vals by to make vector add to 1
+        double scaleAdditive = (1 - sumArray(part, p_next.full, n))*one_over_n;
+        {
+			loop(j, part, perNode, p_next.full[j] += scaleAdditive);
+		}
+        // calculate delta value between current and new pageranks
+        delta = interim_normDiff(part, p_curr.heads, p_next.full, n);
 
         // reset p_curr and swap vertices
-        vertexMap(part, Frontier,PR_Vertex_Reset<PairsArray>(p_curr.pairs));
-        swap(p_curr,p_next);
-        // manage frontier stuff
-        Frontier.del();
-        Frontier = output;
-
-        cerr << count << ": delta = " << delta << "  xnorm = " << sumArray<PairsArray>(part, p_curr.pairs, n) << "\n";
-    }
-    
-    // we don't actually need to copy across p_next since it was just zeroed
-    p_next.del_segments(); // free half memory
-
-    p_curr.full = new double[partElem];
-    loop(j, part, perNode, p_curr.full[j] = p_curr.pairs[j]);
-
-    // fill p_next
-    p_next.full = new double[partElem];
-    loop(j, part, perNode, p_next.full[j] = 0.0);
-
-    while(count<MaxIter) // full precision
-    {
-        // power method step (main page rank step)
-        partitioned_vertices output = edgeMap(GA, Frontier, PR_F_d<vertex>(p_curr.full,p_next.full,damping,WG.V),m/20);
-
-        // calculate current sum of new pageranks (will sum to < 1)
-        double nextPrSum = sumArray(part, p_next.full, n);
-        // find scaling value to ensure new pageranks sum to 1
-        double w = (1.0 - nextPrSum)*one_over_n;
-
-        // scale values
-        loop(j, part, perNode, p_next.full[j] += w);
-
-        // calculate delta value between current and new pageranks
-        delta = normDiff(part, p_curr.full, p_next.full, n);
-        ++count;
-
-        //reset p_curr
-        vertexMap(part, Frontier,PR_Vertex_Reset_d(p_curr.full));
-        swap(p_curr,p_next);
+        {
+			loop(j, part, perNode, p_curr.full[j] = 0);
+		}
+        swap(p_curr.heads,p_next.heads);
+        swap(p_curr.pairs,p_next.pairs);
+        swap(p_curr.full,p_next.full);
         // manage frontier stuff
         Frontier.del();
         Frontier = output;
 
         cerr << count << ": delta = " << delta << "  xnorm = " << sumArray(part, p_curr.full, n) << "\n";
-        if(delta < epsilon)
+    }
+
+    while(count<MaxIter) // full precision
+    {
+        ++count;
+
+        // p_next[d] += damping * (p_curr[s]/V[s].getOutDegree())
+        partitioned_vertices output = edgeMap(GA, Frontier, PR_F_d<vertex>(p_curr.full,p_next.full,damping,WG.V),m/20);
+
+        // find value to scale PR vals by to make vector add to 1
+        double scaleAdditive = (1 - sumArray(part, p_next.full, n))*one_over_n;
+        {
+        	loop(j, part, perNode, p_next.full[j] += scaleAdditive);
+		}
+
+        // delta = abs(p_curr - p_next)
+        delta = normDiff(part, p_curr.full, p_next.full, n);
+		if(delta < epsilon)
         {
             cerr << "successfully converged\n";
             break;
         }
+        cerr << count << ": delta = " << delta << "  xnorm = " << sumArray(part, p_curr.full, n) << "\n";
+
+        //reset p_curr
+        {
+			loop(j, part, perNode, p_curr.full[j] = 0);
+		}
+        swap(p_curr.heads,p_next.heads);
+        swap(p_curr.pairs,p_next.pairs);
+        swap(p_curr.full,p_next.full);
+        // manage frontier stuff
+        Frontier.del();
+        Frontier = output;
     }
 
     // clean up memory
     Frontier.del();
-    // p_curr.del();
-    // p_next.del();
+	p_curr.del_segments();
+	p_next.del_segments();
 }

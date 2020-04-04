@@ -130,8 +130,8 @@ double sumArray(const partitioner &part, F* a, intT n)
     return d;
 }
 
-template<typename F>
-double seqnormdiff(F* a, F* b, intT n)
+template<typename F1, typename F2>
+double seqnormdiff(F1* a, F2* b, intT n)
 {
     double d = 0.;
     double err = 0.;
@@ -147,19 +147,24 @@ double seqnormdiff(F* a, F* b, intT n)
     return d;
 }
 
-template<typename F>
-double normDiff(const partitioner &part, F* a, F* b, intT n)
+template<typename F1, typename F2>
+double normDiff(const partitioner &part, F1* a, F2* b, intT n)
 {
     double d = 0.;
     int p = part.get_num_partitions();
     double *psum = new double [p];
     double err = 0.;
     double tmp, y;
+
+	// requires auto declaration of function because
+	// map_partition macro doesn't like there being more than one type
+	// in the function template parameters
+	auto snd = seqnormdiff<F1, F2>;
     /* calculate sum per partition */
     map_partition( k, part, {
         intT s = part.start_of(k);
         intT e = part.start_of(k+1);
-        psum[k] = seqnormdiff<F>( &a[s], &b[s], e-s);
+        psum[k] = snd( &a[s], &b[s], e-s);
     } );
 
     for( int i=0; i < p; ++i ) 
@@ -187,7 +192,7 @@ void Compute(GraphType &GA, long start)
     intT m = GA.m;
     const double damping = 0.85;
     const double epsilon = 0.0000001;
-    const double float_limit = 0.0001f;    // switch limit = 0.0001 -> 1e-4
+    const double float_limit = 5e-6f;    // switch limit = 0.0001 -> 1e-4
     //Data Array
     //x and y to do special allocation
     //frontier also need special node allocation
@@ -207,36 +212,36 @@ void Compute(GraphType &GA, long start)
     p_next_d.part_allocate (part);
 
     double delta = 2.0;
-    int count=0;
-
     loop(j, part, perNode, p_curr_f[j] = one_over_n);
     loop(j, part, perNode, p_next_f[j] = 0.0f);
 
-    partitioned_vertices Frontier = partitioned_vertices::bits(part,n, m);
-
     cerr << setprecision(16);
 
+    int count=0;
+    partitioned_vertices Frontier = partitioned_vertices::bits(part,n, m);
     // floats
     while(count<MaxIter)
     {
-        // power method step (main page rank step)
+        ++count;
+
+        // p_next[d] += damping * (p_curr[s]/V[s].getOutDegree())
         partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex, float, float>(p_curr_f,p_next_f,damping,WG.V),m/20);
         
-        // calculate current sum of new pageranks (will sum to < 1)
-        float newPrSum = sumArray<float>(part, p_next_f, n);
-        // find scaling value to ensure new pageranks sum to 1
-        float w = (1.0 - newPrSum)*one_over_n;
-        // scale values
-        loop(j, part, perNode, p_next_f[j] += w);
+        // find value to scale PR vals by to make vector add to 1
+        float scaleAdditive = (1 - sumArray<float>(part, p_next_f, n))*one_over_n;
+        {
+			loop(j, part, perNode, p_next_f[j] += scaleAdditive);
+		}
 
-        // calculate delta value between current and new pageranks
-        delta = normDiff<float>(part, p_curr_f, p_next_f, n);
-        ++count;
+        // delta = abs(p_curr - p_next)
+        delta = normDiff<float, float>(part, p_curr_f, p_next_f, n);
     
         cerr << count << ": delta = " << delta << "  xnorm = " << sumArray<float>(part, p_next_f, n) << "\n";
 
         // reset p_curr and swap vertices
-        vertexMap(part, Frontier,PR_Vertex_Reset<float>(p_curr_f));
+        {
+			loop(j, part, perNode, p_curr_f[j] = 0);
+		}
         swap(p_curr_f, p_next_f);
         // manage fronteir stuff
         Frontier.del();
@@ -249,78 +254,71 @@ void Compute(GraphType &GA, long start)
         }
     }
 
-
     // interim (float -> double) step
-    // copy values over to p_curr/next _d first
-    loop(j, part, perNode, p_curr_d[j] = (double)p_curr_f[j]);
-    loop(j, part, perNode, p_next_d[j] = (double)p_next_f[j]);
-
+	// we don't need to copy the values from p_curr_f to p_curr_d since
+	// we don't use them in this iteration..
+    // loop(j, part, perNode, p_curr_d[j] = (double)p_curr_f[j]);
+	// we do need to initialise p_next_d to 0 though.
+	loop(j, part, perNode, p_next_d[j] = 0.);
+	if(count < MaxIter)
     {
-        // power method step (main page rank step)
+        ++count;
+
+        // p_next[d] += damping * (p_curr[s]/V[s].getOutDegree())
         partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex, float, double>(p_curr_f,p_next_d,damping,WG.V),m/20);
         
-        // calculate current sum of new pageranks (will sum to < 1)
-        double newPrSum = sumArray<double>(part, p_next_d, n);
-        // find scaling value to ensure new pageranks sum to 1
-        double w = (1.0 - newPrSum)*one_over_n;
-        // scale values
-        loop(j, part, perNode, p_next_d[j] += w);
+        // find value to scale PR vals by to make vector add to 1
+        double scaleAdditive = (1 - sumArray<double>(part, p_next_d, n))*one_over_n;
+        {
+			loop(j, part, perNode, p_next_d[j] += scaleAdditive);
+		}
 
-        // calculate delta value between current and new pageranks
-        delta = normDiff<double>(part, p_curr_d, p_next_d, n);
-        ++count;
+        // delta = abs(p_curr - p_next)
+        delta = normDiff<float, double>(part, p_curr_f, p_next_d, n);
 
         cerr << count << ": delta = " << delta << "  xnorm = " << sumArray<double>(part, p_next_d, n) << "\n";
 
         // reset p_curr and swap vertices
-        vertexMap(part, Frontier,PR_Vertex_Reset<double>(p_curr_d));
+		{
+			loop(j, part, perNode, p_curr_d[j] = 0);
+		}
         swap(p_curr_d, p_next_d);
         // manage fronteir stuff
         Frontier.del();
         Frontier = output;
-    }
-
-    if(delta < epsilon)
-    {
-        Frontier.del();
-        p_curr_f.del();
-        p_next_f.del();
-        p_curr_d.del();
-        p_next_d.del();
-        return;
     }
 
     // doubles
     while(count<MaxIter)
     {
-        // power method step (main page rank step)
-        partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex, double, double>(p_curr_d,p_next_d,damping,WG.V),m/20);
-        
-        // calculate current sum of new pageranks (will sum to < 1)
-        double newPrSum = sumArray<double>(part, p_next_d, n);
-        // find scaling value to ensure new pageranks sum to 1
-        double w = (1.0 - newPrSum)*one_over_n;
-        // scale values
-        loop(j, part, perNode, p_next_d[j] += w);
-
-        // calculate delta value between current and new pageranks
-        delta = normDiff<double>(part, p_curr_d, p_next_d, n);
         ++count;
 
-        cerr << count << ": delta = " << delta << "  xnorm = " << sumArray<double>(part, p_next_d, n) << "\n";
+        // p_next[d] += damping * (p_curr[s]/V[s].getOutDegree())
+        partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex, double, double>(p_curr_d,p_next_d,damping,WG.V),m/20);
+        
+        // find value to scale PR vals by to make vector add to 1
+        double scaleAdditive = (1 - sumArray<double>(part, p_next_d, n))*one_over_n;
+        {
+			loop(j, part, perNode, p_next_d[j] += scaleAdditive);
+		}
 
-        // reset p_curr and swap vertices
-        vertexMap(part, Frontier,PR_Vertex_Reset<double>(p_curr_d));
-        swap(p_curr_d, p_next_d);
-        // manage fronteir stuff
-        Frontier.del();
-        Frontier = output;
-
-        if(delta < epsilon)
+        // delta = abs(p_curr - p_next)
+        delta = normDiff<double, double>(part, p_curr_d, p_next_d, n);
+		if(delta < epsilon)
         {
             cerr << "successfully converged\n";
             break;
         }
+        cerr << count << ": delta = " << delta << "  xnorm = " << sumArray<double>(part, p_next_d, n) << "\n";
+
+        // reset p_curr and swap vertices
+        {
+			loop(j, part, perNode, p_curr_d[j] = 0);
+		}
+        swap(p_curr_d, p_next_d);
+        // manage fronteir stuff
+        Frontier.del();
+        Frontier = output;
     }
 
 

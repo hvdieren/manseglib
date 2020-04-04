@@ -169,36 +169,6 @@ double normDiff(const partitioner &part, double* a, double* b, intT n)
     return d;
 }
 
-/* double normDiff(double* a, double* b, intT n)
-{
-	double d = 0.;
-	double err = 0.;
-	for(intT i = 0; i < n; ++i)
-	{
-		double tmp = d;
-		double y = fabs(b[i] - a[i]) + err;
-		d = tmp + y;
-		err = tmp - d;
-		err += y;
-	}
-	return d;
-}
-
-double sumArray(double* a, intT n)
-{
-	double d = 0.;
-	double err = 0.;
-	for(intT i = 0; i < n; ++i)
-	{
-		double tmp = d;
-		double y = a[i] + err;
-		d = tmp + y;
-		err = tmp - d;
-		err += y;
-	}
-	return d;
-} */
-
 template <class GraphType>
 void Compute(GraphType &GA, long start)
 {
@@ -215,7 +185,7 @@ void Compute(GraphType &GA, long start)
     //x and y to do special allocation
     //frontier also need special node allocation
     //blocksize equal to the szie of each partitioned
-    // double one_over_n = 1/(double)n;
+    double one_over_n = 1/(double)n;
 
     mmap_ptr<double> p_curr;
     p_curr.part_allocate (part);
@@ -223,7 +193,7 @@ void Compute(GraphType &GA, long start)
     p_next.part_allocate (part);
 
     double delta = 2.0;
-    loop(j, part, perNode, p_curr[j] = 1/(double)n);
+    loop(j, part, perNode, p_curr[j] = one_over_n);
     loop(j, part, perNode, p_next[j] = 0);
 
     cerr << setprecision(16);
@@ -237,22 +207,21 @@ void Compute(GraphType &GA, long start)
         // p_next[d] += damping * (p_curr[s]/V[s].getOutDegree())
         partitioned_vertices output = edgeMap(GA, Frontier, PR_F<vertex>(p_curr,p_next,damping,WG.V),m/20);
 
-		// sums to < 1
-		double scaleAdditive = (1 - sumArray(part, p_next, n));
-		scaleAdditive *= (1/(double)n);
+		// find value to scale PR vals by to make vector add to 1
+		double scaleAdditive = (1 - sumArray(part, p_next, n))*one_over_n;
 		{
 			loop(j, part, perNode, p_next[j] += scaleAdditive);
 		}
 
 		// delta = abs(p_curr - p_next)
 		delta = normDiff(part, p_curr, p_next, n);
-
-        cerr << count << ": delta = " << delta << "  norm. sum = " << sumArray(part, p_next, n) << "\n";
         if(delta < epsilon)
         {
             cerr << "successfully converged\n";
             break;
         }
+        cerr << count << ": delta = " << delta << "  norm. sum = " << sumArray(part, p_next, n) << "\n";
+
 
         // reset p_curr and swap vertices
 		{
