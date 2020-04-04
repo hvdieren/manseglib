@@ -11,6 +11,8 @@
 #include "mantissaSegmentation_dev.hpp"
 #include "matrix.h"
 #include "vector.h"
+#include <numa.h>
+
 
 using namespace ManSeg;
 
@@ -120,8 +122,23 @@ double sum(double* t, int n)
     return sum;
 }
 
+template<typename F1, typename F2>
+double tmplFoo(F1 a, F2 b)
+{
+	return (a + b);
+}
+
 int main()
 {
+	auto itmplFoo = tmplFoo<int, int>;
+	auto dftmplFoo = tmplFoo<double, float>;
+
+	std::cout << "itmplFoo(3, 4) = " << itmplFoo(3, 4) << "\n";
+	std::cout << "dtmplFoo(3.5, 4.f) = " << dftmplFoo(3.5, 4.f) << "\n";
+
+	return 0;
+
+
     const int size = 10;
     ManSegArray a(size);
 
