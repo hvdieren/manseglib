@@ -368,43 +368,6 @@ void test4()
     y->del(); yy->del();
 }
 
-// reading SNAP file format test
-void testSNAP()
-{
-    using std::ifstream;
-    using std::cout;
-    using std::endl;
-
-    ifstream file;
-    file.open("../../graphs/Yahoo.txt");
-
-    if(file.is_open())
-    {
-        for(int i = 0; i < 50; ++i)
-        {
-            std::string line;
-            getline(file, line);
-            cout << line << "\n";
-        }
-
-        file.close();
-    }
-
-    /*
-        Outside of the initial couple of lines, looks similar to COO format.
-        ****************************
-        File format:
-        #SNAP Yahoo
-        #Nodes:123539879 Edges:123456789
-        #FromNodeId\t   ToNodeId
-        0 1
-        0 12
-        0 234
-        1 25232
-        *****************************
-    */
-}
-
 // helper for test5 & test6
 template<class TwoSegArray>
 void t5Helper(TwoSegArray* ms, int size, int repeats, int* loc)
@@ -568,6 +531,113 @@ void test6()
     delete[] d, f, t, loc;
 }
 
+template<class T1, class T2, class T3>
+void fill_test7(T1& d, T1& dy, T2& x, T2& xy, T3& y, T3& yy, int* v, const int& size)
+{
+    for(int i = 0; i < size; ++i)
+    {
+        v[i] = (i+1);
+
+        x[i] = (double)(i+1)/0.1;
+        xy[i] = 0.0;
+
+        y[i] = (double)(i+1)/0.1;
+        yy[i] = 0.0;
+        
+        d[i] = (double)(i+1)/0.1;
+        dy[i] = 0.0;        
+    }
+}
+
+template<class ArrType>
+double test7_main(ArrType& d, ArrType& dy, int* v, int* loc)
+{
+    auto dst = std::chrono::_V2::high_resolution_clock::now();
+
+	#pragma omp parallel for num_threads(8)
+    for(int i = 0; i < size; ++i)
+    {
+        for(int j = 0; j < size; ++j) dy[i] += val*(d[loc[j]]/v[j]);
+    }
+
+    auto ded = std::chrono::_V2::high_resolution_clock::now();
+    auto dt = std::chrono::duration_cast<std::chrono::nanoseconds>(ded - dst).count()*1e-9;
+
+	return dt;
+}
+
+template<class ArrType>
+double test7_main_with_acc(ArrType& x, ArrType& xy, int* v, int* loc)
+{
+    double* acc = new double[size];
+
+    auto mxst = std::chrono::_V2::high_resolution_clock::now();
+	#pragma omp parallel for num_threads(8)
+    for(int i = 0; i < size; ++i)
+    {
+        for(int j = 0; j < size; ++j) acc[i] += val*(x[loc[j]]/v[j]);
+
+        xy[i] = acc[i];
+    }
+    auto mxed = std::chrono::_V2::high_resolution_clock::now();
+    auto mt = std::chrono::duration_cast<std::chrono::nanoseconds>(mxed - mxst).count()*1e-9;
+
+    delete[] acc;
+	return mt;
+}
+
+void test7()
+{
+	constexpr size_t size = 1000000U;
+    HeadsArray* x = new HeadsArray(size);
+    HeadsArray* xy = new HeadsArray(size);       // x, xy = heads
+    PairsArray* y = new PairsArray(size);
+    PairsArray* yy = new PairsArray(size);       // y, yy = pairs
+
+    int* v = new int[size];
+    double* d = new double[size];
+    double* dy = new double[size];              // d, dy = doubles
+
+    srand(1992);
+    // randomise data accesses
+    int* loc = new int[size];
+    for(int i = 0; i < size; ++i)
+        loc[i] = (rand() % size);
+
+    // fill arrays initially
+    fill_test7(d, dy, *x, *xy, *y, *yy, v, size);
+
+	double dt;
+    std::cout << "round 1 - read and write direct \n";
+    // doubles
+    dt = test7_main(d, dy, v, loc);
+    std::cout << "std double = " << dt << "s\n";
+    // heads
+    dt = test7_main(*x, *xy, v, loc);
+	std::cout << "heads ver = " << dt << "s\n";
+    // pairs
+    dt = test7_main(*y, *yy, v, loc);
+	std::cout << "pairs ver = " << dt << "s\n";
+
+    std::cout << "round 2 - read from manseg, write to double accumulator \n";
+    // reset
+    fill_test7(d, dy, *x, *xy, *y, *yy, v, size);
+
+    // doubles
+    dt = test7_main_with_acc(d, dy, v, loc);
+    std::cout << "std double = " << dt << "s\n";
+    // heads
+    dt = test7_main_with_acc(*x, *xy, v, loc);
+	std::cout << "heads ver = " << dt << "s\n";
+    // pairs
+    dt = test7_main_with_acc(*y, *yy, v, loc);
+	std::cout << "pairs ver = " << dt << "s\n";
+
+    delete[] d, dy, v, loc;
+    x->del(); xy->del();
+    y->del(); yy->del();
+}
+
 int main(int argc, char** argv)
 {
     if(argc < 2)
@@ -604,6 +674,7 @@ int main(int argc, char** argv)
         break;
     case 4:
         std::cout << "nano benchmark that emulates pagerank, sort of, kind of" << std::endl;
+		std::cout << "sequential version" << std::endl;
         test4(); // test basic math potential in a few ways
         break;
     case 5:
@@ -614,6 +685,10 @@ int main(int argc, char** argv)
         std::cout << "pico benchmark for pseudo-random reads" << std::endl;
         test6(); // read tests
         break;
+	case 7:
+		std::cout << "parallel pico-benchmark (pagerank-like)" << std::endl;
+		test7();
+		break;
     default:
         test1();
         std::cout << "\n";
@@ -626,6 +701,8 @@ int main(int argc, char** argv)
         test5();
         std::cout << "\n";
         test6();
+        std::cout << "\n";
+		test7();
         std::cout << "\n";
     };
 
