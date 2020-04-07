@@ -135,7 +135,11 @@ namespace ManSeg
     class TwoSegArray<true>
     {
     public:
-        TwoSegArray() {}
+        TwoSegArray() 
+		{
+			heads = nullptr;
+			tails = nullptr;
+		}
 
         TwoSegArray(const uint_fast64_t& length)
         {
@@ -229,7 +233,11 @@ namespace ManSeg
     class TwoSegArray<false>
     {
     public:
-        TwoSegArray() {}
+        TwoSegArray()
+		{
+			heads = nullptr;
+			tails = nullptr;
+		}
 
         TwoSegArray(const uint_fast64_t& length)
         {
@@ -576,7 +584,7 @@ namespace ManSeg
         TwoSegArray<true> pairs;
         double* full;
 
-        ManSegArray() {}
+        ManSegArray() { full = nullptr; }
 
         ~ManSegArray() { if(full != nullptr) delete[] full; }
 
@@ -585,6 +593,7 @@ namespace ManSeg
             this->length = length;
             heads.alloc(length);
             pairs = heads.createFullPrecision();
+			full = nullptr;
         }
 
         /*
@@ -598,12 +607,11 @@ namespace ManSeg
         }
 
         /*
-            Implements precision switching by copying the full 64-bit values from the pairs
-            array to the full doubles array.
+            Implements precision switching by allocating *length* space for copying the full 64-bit values from
+			the pairs array to the full doubles array.
 
-            This is implemented in the library using omp parallel, however it can also be
-            accomplished by the user, by allocating the full array, copying the values then
-            calling the del() function
+            This is implemented using omp parallel, however it can also be accomplished by the user, as full is
+			publically available.
         */
 
         void precisionSwitch()
@@ -613,14 +621,13 @@ namespace ManSeg
             #pragma omp parallel for
 			for(int i = 0; i < length; ++i)
 				full[i] = heads[i];
-            del_segments();
         }
 
         /* 
             Deletes space allocated to the segments arrays.
             WARNING: should only be called once, as heads and pairs share the array space.
         */
-        void del_segments() { heads.del(); }
+        void delSegments() { heads.del(); }
 
     private:
         uint_fast64_t length;
