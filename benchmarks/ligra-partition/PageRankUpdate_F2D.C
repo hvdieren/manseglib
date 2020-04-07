@@ -41,12 +41,12 @@ struct PR_F
         p_curr_in(_p_curr_in), p_next_out(_p_next_out), damping(_damping), V(_V) {}
     inline bool update(intT s, intT d)  //update function applies PageRank equation
     {
-        p_next_out[d] += (F_out)(damping*p_curr_in[s]/V[s].getOutDegree());
+        p_next_out[d] += (F_out)( damping*(p_curr_in[s]/V[s].getOutDegree()) );
         return 1;
     }
     inline bool updateAtomic (intT s, intT d)   //atomic Update
     {
-        writeAdd<F_out>(&p_next_out[d], (F_out)(damping*p_curr_in[s]/V[s].getOutDegree()));
+        writeAdd<F_out>(&p_next_out[d], (F_out)( damping*(p_curr_in[s]/V[s].getOutDegree()) ));
         return 1;
     }
 
@@ -56,7 +56,7 @@ struct PR_F
     }
     inline bool update(cache_t &cache, intT s)
     {
-        cache.p_next += (F_out)(damping*p_curr_in[s]/V[s].getOutDegree());
+        cache.p_next += (F_out)(F_out)( damping*(p_curr_in[s]/V[s].getOutDegree()) );
         return 1;
     }
 
