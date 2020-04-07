@@ -217,7 +217,7 @@ void Compute(GraphType &GA, long start)
 		delta = normDiff(part, p_curr, p_next, n);
         if(delta < epsilon)
         {
-            cerr << "successfully converged\n";
+            cerr << "successfully converged in " << count << " iterations\n";
             break;
         }
         cerr << count << ": delta = " << delta << "  norm. sum = " << sumArray(part, p_next, n) << "\n";

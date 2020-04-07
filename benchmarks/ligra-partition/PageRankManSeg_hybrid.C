@@ -320,7 +320,7 @@ double normDiff(const partitioner &part, ArrayType& a, ArrayType& b, intT n)
     return d;
 }
 
-double interim_seqnormdiff(HeadsArray& a, double* b, intT s, intT e)
+double interim_seqnormdiff(PairsArray& a, double* b, intT s, intT e)
 {
     double d = 0.;
     double err = 0.;
@@ -336,7 +336,7 @@ double interim_seqnormdiff(HeadsArray& a, double* b, intT s, intT e)
     }
     return d;
 }
-double interim_normDiff(const partitioner &part, HeadsArray& a, double* b, intT n)
+double interim_normDiff(const partitioner &part, PairsArray& a, double* b, intT n)
 {
     double d = 0.;
     int p= part.get_num_partitions();
@@ -471,7 +471,11 @@ void Compute(GraphType &GA, long start)
     p_curr.full = new double[partElem];
     p_next.full = new double[partElem];
 
-    double delta = 2.0;
+    double delta = 2.0, prev_delta = 2.0;
+	int check_freq = 4;
+	double threshold = 10;
+	int step = 0; 
+
     loop(j, part, perNode, p_curr.heads[j] = one_over_n);
     loop(j, part, perNode, p_next.heads[j] = 0.0);
 	loop(j, part, perNode, p_next.full[j] = 0.0);
@@ -510,11 +514,21 @@ void Compute(GraphType &GA, long start)
 
         cerr << count << ": delta = " << delta << "  xnorm = " << sumArray<HeadsArray>(part, p_curr.heads, n) << "\n";
         // ensure swap & reset happens *before* breaking from loop
-        if(delta < ManSeg::AdaptivePrecisionBound)
-        {   
-            cerr << "switching precision at iteration: " << count << "\n";
-            break;
-        }
+        
+		++step;
+		if(step == check_freq)
+		{
+			double ratio = prev_delta / delta;
+			cout << "ratio = " << ratio << "\n";
+			if(ratio <= threshold)
+			{
+				cerr << "switching precsion at iter " << count << "\n";
+				break;
+			}
+
+			prev_delta = delta;
+			step = 0;
+		}
     }
 
     // Interim Iteration required for switching precisions.
@@ -545,7 +559,7 @@ void Compute(GraphType &GA, long start)
 			loop(j, part, perNode, p_next.full[j] += scaleAdditive);
 		}
         // calculate delta value between current and new pageranks
-        delta = interim_normDiff(part, p_curr.heads, p_next.full, n);
+        delta = interim_normDiff(part, p_curr.pairs, p_next.full, n);
 
         // reset p_curr and swap vertices
         {
@@ -578,7 +592,7 @@ void Compute(GraphType &GA, long start)
         delta = normDiff(part, p_curr.full, p_next.full, n);
 		if(delta < epsilon)
         {
-            cerr << "successfully converged\n";
+            cerr << "successfully converged in" << count " iterations\n";
             break;
         }
         cerr << count << ": delta = " << delta << "  xnorm = " << sumArray(part, p_curr.full, n) << "\n";
