@@ -72,8 +72,6 @@ matrix_coo* coo_load(const char *fname, int *n, int *nz)
     qsort(coo, k, sizeof(matrix_coo), compar);
     *n = N; *nz = k;
 
-    coo->useTail = false;
-
     return coo;
 }
 
@@ -109,30 +107,6 @@ double coo_max_nz(int n, int nz, matrix_coo *coo)
 }
 
 // CSR matrix
-/* void csr_dmult_heads(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
-{
-	#pragma omp parallel for \
-		shared(mat, x, y)
-    for (int k = 0; k < mat->n; k++) {
-        DOUBLE t = 0.0;
-        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-            t += mat->A->heads[l] * x[mat->j[l]];
-        y[k] = t;
-    }
-}
-
-void csr_dmult_full(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
-{
-	#pragma omp parallel for \
-		shared(mat, x, y)
-    for (int k = 0; k < mat->n; k++) {
-        DOUBLE t = 0.0;
-        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-            t += mat->A->full[l] * x[mat->j[l]];
-        y[k] = t;
-    }
-} */
-
 void csr_dmult(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
 {
 	#pragma omp parallel for \
@@ -144,30 +118,6 @@ void csr_dmult(matrix_csr *mat, DOUBLE *x, DOUBLE *y)
         y[k] = t;
     }
 }
-
-/* void csr_smult_heads(matrix_csr *mat, FLOAT *x, FLOAT *y)
-{
-	#pragma omp parallel for \
-		shared(mat, x, y)
-    for (int k = 0; k < mat->n; k++) {
-        FLOAT2 t = 0.0;
-        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-            t += mat->A->heads[l] * x[mat->j[l]];
-        y[k] = t;
-    }
-}
-
-void csr_smult_full(matrix_csr *mat, FLOAT *x, FLOAT *y)
-{
-	#pragma omp parallel for \
-		shared(mat, x, y)
-    for (int k = 0; k < mat->n; k++) {
-        FLOAT2 t = 0.0;
-        for (int l = mat->i[k]; l < mat->i[k + 1]; l++)
-            t += mat->A->full[l] * x[mat->j[l]];
-        y[k] = t;
-    }
-} */
 
 void csr_smult(matrix_csr *mat, FLOAT *x, FLOAT *y)
 {
@@ -181,36 +131,18 @@ void csr_smult(matrix_csr *mat, FLOAT *x, FLOAT *y)
     }
 }
 
-inline void csr_precision_increase(matrix_csr *mat)
-{
-    // mat->A->del_segments();
-    // mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_full;
-    // mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_full;
-}
-
-inline void csr_precision_reduce(matrix_csr *mat)
-{
-    // mat->A->del_segments();
-    // mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_heads;
-    // mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_heads;
-}
-
 matrix *csr_create(int n, int nz, matrix_coo *coo)
 {
     int *i = ALLOC(int, n + 1);
     int *j = ALLOC(int, nz);
     DOUBLE *A = ALLOC(DOUBLE, nz);
-    // ManSegArray *A = new ManSegArray(nz);
-    // A->full = new double[nz];
 
     i[0] = 0;
     int l = 0;
     for (int k = 0; k < n; k++) {
         while (l < nz && coo[l].i == k) {
             j[l] = coo[l].j;
-            // A->pairs[l] = coo[l].a;
-			// A->full[l] = coo[l].a;
-			A[l] = coo[l].a;
+            A[l] = coo[l].a;
             l++;
         }
         i[k + 1] = l;
@@ -221,47 +153,13 @@ matrix *csr_create(int n, int nz, matrix_coo *coo)
     mat->i = i;
     mat->j = j;
     mat->A = A;
-    // mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_heads;
-    // mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_heads;
-	// mat->useTail = false;
-    
-	// mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult_full;
-    // mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult_full;
-    // mat->useTail = true;
-
-	mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult;
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))csr_dmult;
     mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))csr_smult;
-    mat->precision_increase = (void (*)(matrix *))csr_precision_increase;
-	mat->precision_reduce = (void (*)(matrix *))csr_precision_reduce;
 
     return (matrix *)mat;
 }
 
 // dense matrix
-/* void dense_dmult_heads(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
-{
-	#pragma omp parallel for \
-		shared(mat, x, y)
-    for (int i = 0; i < mat->n; i++) {
-        DOUBLE t = 0.0;
-        for (int j = 0; j < mat->n; j++)
-            t += mat->A->heads[i * mat->n + j] * x[j];
-        y[i] = t;
-    }
-}
-
-void dense_dmult_full(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
-{
-	#pragma omp parallel for \
-		shared(mat, x, y)
-    for (int i = 0; i < mat->n; i++) {
-        DOUBLE t = 0.0;
-        for (int j = 0; j < mat->n; j++)
-            t += mat->A->full[i * mat->n + j] * x[j];
-        y[i] = t;
-    }
-} */
-
 void dense_dmult(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
 {
 	#pragma omp parallel for \
@@ -273,30 +171,6 @@ void dense_dmult(matrix_dense *mat, DOUBLE *x, DOUBLE *y)
         y[i] = t;
     }
 }
-
-/* void dense_smult_heads(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
-{
-	#pragma omp parallel for \
-		shared(mat, x, y)
-    for (int i = 0; i < mat->n; i++) {
-        FLOAT2 t = 0.0;
-        for (int j = 0; j < mat->n; j++)
-            t += mat->A->heads[i * mat->n + j] * x[j];
-        y[i] = t;
-    }
-}
-
-void dense_smult_full(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
-{
-	#pragma omp parallel for \
-		shared(mat, x, y)
-    for (int i = 0; i < mat->n; i++) {
-        FLOAT2 t = 0.0;
-        for (int j = 0; j < mat->n; j++)
-            t += mat->A->full[i * mat->n + j] * x[j];
-        y[i] = t;
-    }
-} */
 
 void dense_smult(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
 {
@@ -310,44 +184,18 @@ void dense_smult(uint8_t m, matrix_dense *mat, FLOAT *x, FLOAT *y)
     }
 }
 
-inline void dense_precision_increase(matrix_dense *mat)
-{
-    // mat->A->del_segments();
-    // mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult_full;
-    // mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult_full;
-}
-
-inline void dense_precision_reduce(matrix_dense *mat)
-{
-	// mat->A->del_segments();
-	// mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult_heads;
-	// mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult_heads;
-}
-
 matrix *dense_create(int n, int nz, matrix_coo *coo)
 {
     DOUBLE *A = CALLOC(DOUBLE, n * n);
-    // ManSegArray *A = new ManSegArray(n*n);
-    // A->full = new double[n*n];
 
     // row major format
-    // for (int k = 0; k < nz; k++) A->pairs[coo[k].i * n + coo[k].j] = coo[k].a;
     for (int k = 0; k < nz; k++) A[coo[k].i * n + coo[k].j] = coo[k].a;
     
-    // copy values across during creation
-    // for(int k = 0; k < nz; k++) A->full[k] = A->pairs[k];
-
     matrix_dense *mat = new matrix_dense();
     mat->n = n;
-    // mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult_heads;
-    // mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult_heads;
-
-	mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult;
+    mat->dmult = (void (*)(matrix *, DOUBLE *, DOUBLE *))dense_dmult;
     mat->smult = (void (*)(matrix *, FLOAT *, FLOAT *))dense_smult;
     mat->A = A;
-    mat->precision_increase = (void (*)(matrix *))dense_precision_increase;
-	mat->precision_reduce = (void (*)(matrix *))dense_precision_reduce;
-    mat->useTail = false;
 
     return (matrix *)mat;
 }
@@ -365,6 +213,7 @@ void jacobi_smult(precond_jacobi *pre, FLOAT *x, FLOAT *y)
 struct matrix *jacobi_create(int n, int nz, matrix_coo *coo)
 {
     FLOAT *d = ALLOC(FLOAT, n);
+	// ManSegArray *d = new ManSegArray(n);
     for (int k = 0; k < nz; k++)
         if (coo[k].i == coo[k].j)
 		{

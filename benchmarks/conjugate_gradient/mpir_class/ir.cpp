@@ -22,8 +22,6 @@ void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int
     vector_set(n, 0.0, x);
     mixed_copy(n, b, r); // r = (float)b
 
-
-	double x_norm, x_norm_prev;
     DOUBLE residual;
     do
     {
@@ -38,6 +36,7 @@ void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int
         floatm_set(n, 0.0, d);
 
 		printf("%d: outer: residual = %e\n", *out_iter, residual);
+
         // *energy += iter * (bits + 12) / 8;
         // printf("%d %d %d %e %e\n", *in_iter, 0, bits, (double)residual, (double)residual);
 

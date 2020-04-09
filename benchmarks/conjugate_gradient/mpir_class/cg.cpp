@@ -50,12 +50,9 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
     int step = 0;
     FLOAT2 residual = tol;
 
-	FLOAT2 x_norm_prev, x_norm;
-	x_norm_prev = 0;
-
 	// tol = recurrence residual
 	// residual = true residual
-	// 10 = deviation (over 10x away) from the true residual
+	// 10 = deviation (ie. over 10x) from the true residual
     while ((iter < maxiter) && (tol > umbral)) {
 		// w = Ap(k+1)
 		floatm_mult(A, p, z);
@@ -65,19 +62,6 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
 		}
 		else {
 			floatm_mult(A, x, tr);		 // tr = Ax
-
-			// not great performance, but better than most things
-			/* if(!A->useTail)
-			{
-				x_norm = floatm_norm2(n, x); // <-- expensive, so we only do every step
-				double vv = fabs(x_norm_prev-x_norm)/x_norm_prev; // percentage change
-				// printf("abs(x_diff/x_norm_prev) = %e\n", vv);
-				if(vv < 1e-5)
-					mat_increase_precision(A);
-				else
-					x_norm_prev = x_norm;
-			} */
-
 			floatm_xpby(n, b, -1.0, tr); // tr = b - Ax
 			residual = floatm_norm2(n, tr);
 			printf("# rescheck: total_cg_iter=%d current_iter=%d tol=%e resid=%e\n", *in_iter, iter, (double)tol, (double)residual);
@@ -88,6 +72,7 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
 				printf("broke out : iter = %d\n", *in_iter);
 				break;
 			}
+
 			step = 1;
 		}
 
