@@ -32,8 +32,8 @@
 #include <math.h>
 #include <time.h>
 
-#define NB 16
-#define B 64
+#define NB 32
+#define B 128
 #define FALSE (0)
 #define TRUE (1)
 
@@ -48,6 +48,7 @@ typedef fp_type *binout;
 fp_type *A[NB][NB];
 fp_type *A_new[NB][NB];
 fp_type *tmp[NB][NB];
+fp_type blockDelta[NB][NB];
 
 void alloc_and_genmat()
 {
@@ -64,6 +65,7 @@ void alloc_and_genmat()
             A_new[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
             tmp[ii][jj] = (fp_type *)malloc(B * B * sizeof(fp_type));
 
+            blockDelta[ii][jj] = 0.0;
             if (A[ii][jj] == NULL || A_new[ii][jj] == NULL || tmp[ii][jj] == NULL)
             {
                 printf("Out of memory\n");
@@ -130,11 +132,12 @@ void getfirstcol(bin A, vout v)
         v[i] = A[i * B + 0];
 }
 
-void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo, bin A, binout A_new)
+void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo, bin A, binout A_new, fp_type* blockDelta)
 {
     int i, j;
     fp_type tmp;
     fp_type left, top, right, bottom;
+    fp_type fullResult, deltaErr = 0.0;
 
     for (i = 0; (i < B); i++)
     {
@@ -146,7 +149,18 @@ void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo, bin A, bin
             right = (j == B - 1 ? righthalo[i] : A[i * B + j + 1]);
             bottom = (i == B - 1 ? bottomhalo[i] : A[(i + 1) * B + j]);
 
-            A_new[i * B + j] = 0.2 * (A[i * B + j] + left + top + right + bottom);
+            // A_new[i * B + j] = 0.2 * (A[i * B + j] + left + top + right + bottom);
+            fullResult = 0.2 * (A[i * B + j] + left + top + right + bottom);
+            A_new[i * B + j] = fullResult;
+
+            // record difference between full result and stored value
+            // (*blockDelta) += fabs(fullResult - A_new[i * B + j])
+            fp_type deltaTmp = (*blockDelta);
+            fp_type y = fabs(fullResult - A_new[i * B + j]) + deltaErr;
+            
+            (*blockDelta) = deltaTmp + y;
+            deltaErr = deltaTmp - (*blockDelta);
+            deltaErr += y;
         }
     }
 }
@@ -156,7 +170,7 @@ double maxdelta()
 	double dmax = -__DBL_MAX__;
 
 	int ii, jj, i, j;
-	#pragma omp parallel for schedule(static) reduction(max: dmax)
+	#pragma omp parallel for reduction(max: dmax)
 	for (ii = 0; ii < NB; ii++)
 	{
 		for (jj = 0; jj < NB; jj++)
@@ -182,16 +196,16 @@ void compute(int niters)
     fp_type lefthalo[B], tophalo[B], righthalo[B], bottomhalo[B];
 
 	double delta = 2.0;
-	double epsilon = 1e-7;
+	double epsilon = 1e-4;
 
 	iters = 0;
     // for (iters = 0; iters < niters; iters++)
-	while(iters < niters)
+	while(delta > epsilon)
     {
 		++iters;
         #pragma omp parallel \
             private(ii, jj, lefthalo, tophalo, righthalo, bottomhalo) \
-            shared(A, A_new)
+            shared(A, A_new, blockDelta)
         {
             #pragma omp for schedule(static)
             for (ii = 0; ii < NB; ii++)
@@ -218,7 +232,7 @@ void compute(int niters)
                     else
                         clear(lefthalo);
 
-                    jacobi(lefthalo, tophalo, righthalo, bottomhalo, A[ii][jj], A_new[ii][jj]);
+                    jacobi(lefthalo, tophalo, righthalo, bottomhalo, A[ii][jj], A_new[ii][jj], &blockDelta[ii][jj]);
                 } // jj
             } // ii
         } // end parallel
@@ -229,14 +243,17 @@ void compute(int niters)
 		// yes, this is an inefficient copy
 		// however, the library version requires you to do a copy in this way
 		// on all of the component parts to avoid segmentation fault
-		#pragma omp parallel for schedule(static) shared(A, A_new)
 		for(int i = 0; i < NB; ++i)
 		{
 			for(int j = 0; j < NB; ++j)
 			{
 				for(int k = 0; k < B; ++k)
+				{
 					for(int l = 0; l < B; ++l)
+					{	
 						A[i][j][k * B + l] = A_new[i][j][k * B + l];
+					}
+				}
 			}
 		}
 			

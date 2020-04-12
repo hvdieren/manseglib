@@ -150,9 +150,8 @@ namespace ManSeg
         TwoSegArray(float* heads, float* tails)
             :heads(heads), tails(tails)
         {}
-		// must manually call del()
-        ~TwoSegArray()
-        {}
+
+        ~TwoSegArray() { }
 
         Pair operator[](const uint_fast64_t& id)
         {
@@ -204,12 +203,13 @@ namespace ManSeg
             NOTE: this should only be called by one object with references to
             the same set of values (such as object created using createFullPrecision).
         */
+
         void del()
         {
             if(heads != nullptr) delete[] heads;
             if(tails != nullptr) delete[] tails;
 			heads = nullptr;
-			tails = nullptr;   
+			tails = nullptr;
         }
 
     private:
@@ -246,9 +246,8 @@ namespace ManSeg
         TwoSegArray(float* heads, float* tails)
             :heads(heads), tails(tails)
         {}
-		// must manually call del()
-        ~TwoSegArray()
-        {}
+
+        ~TwoSegArray() { }
 
         template<typename T>
         void set(const uint_fast64_t& id, const T& t)
@@ -305,9 +304,9 @@ namespace ManSeg
         void del()
         {
             if(heads != nullptr) delete[] heads;
-            if(tails != nullptr) delete[] tails;
+            if(tails != nullptr) delete[] tails;   
 			heads = nullptr;
-			tails = nullptr;   
+			tails = nullptr;
         }
 
     private:
@@ -577,11 +576,13 @@ namespace ManSeg
     class ManSegArray
     {
     public:
-        TwoSegArray<false> heads; // WARNING: do not manually call del() function of this
+        TwoSegArray<false> heads;
         TwoSegArray<true> pairs;
-        double* full; // WARNING: do not manually use delete[] operator without setting to nullptr afterwards
+        double* full;
 
-        ManSegArray() { length = 0; full = nullptr; }
+        ManSegArray() { full = nullptr; }
+
+        ~ManSegArray() { }
 
         ManSegArray(const uint_fast64_t& length)
         {
@@ -591,11 +592,9 @@ namespace ManSeg
 			full = nullptr;
         }
 
-        ~ManSegArray() { if(full != nullptr) delete[] full; full = nullptr; }
-
         /*
             Allocates length elements to the array dynamically.
-            Note: this array space is used for both heads and pairs.
+            Note: this array space is used for both heads and pairs
         */
         void alloc(const uint_fast64_t& length)
         {
@@ -606,10 +605,10 @@ namespace ManSeg
         /*
             Implements precision switching by allocating length space for copying the full 64-bit values from
 			the pairs array to the full doubles array.
+
             This is implemented using omp parallel, however it can also be accomplished by the user, as full is
 			publically available.
         */
-
         void copytoIEEEdouble()
         {
             full = new double[length];
@@ -620,10 +619,16 @@ namespace ManSeg
         }
 
         /* 
-            Deletes space allocated to the segments arrays. Required to be called to free memory of segmented type.
+            Deletes space allocated to the segments arrays.
             WARNING: should only be called once, as heads and pairs share the array space.
         */
         void delSegments() { heads.del(); }
+
+		/*
+			Deletes space allocated to full IEEE double precision array.
+			Must be called in order to free space.
+		*/
+		void del() { if(full != nullptr) delete[] full; full = nullptr; }
 
     private:
         uint_fast64_t length;

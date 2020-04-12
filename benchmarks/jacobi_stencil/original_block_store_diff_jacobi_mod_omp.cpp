@@ -1,3 +1,5 @@
+// (original) block-storage difference
+
 /*
 * Copyright (c) 2008, BSC (Barcelon Supercomputing Center)
 * All rights reserved.
@@ -36,8 +38,8 @@
 
 using namespace ManSeg;
 
-#define NB 16
-#define B 64
+#define NB 32
+#define B 128
 #define FALSE (0)
 #define TRUE (1)
 
@@ -51,10 +53,9 @@ typedef ManSegArray binout;
 
 ManSegArray A[NB][NB];
 ManSegArray A_new[NB][NB];
+fp_type blockDelta[NB][NB];
 
 enum Precision { HEADS, PAIRS, INTERIM }; // INTERIM = read heads, write pairs
-
-Precision BlockPrecision[NB][NB];
 
 void alloc_and_genmat()
 {
@@ -72,6 +73,7 @@ void alloc_and_genmat()
             A_new[ii][jj].alloc(B * B);
 			A_new[ii][jj].full = new double[B * B];
 
+            blockDelta[ii][jj] = 0.0;
             for (i = 0; i < B; i++)
             {
                 for (j = 0; j < B; j++)
@@ -92,7 +94,15 @@ long usecs(void)
     return t.tv_sec * 1000000 + t.tv_usec;
 }
 
+template<enum Precision = Precision::PAIRS>
 void clear(vout v)
+{
+    int i, j, k;
+    for (i = 0; i < B; i++)
+        v[i] = (fp_type)0.0;
+}
+template<>
+void clear<Precision::HEADS>(vout v)
 {
     int i, j, k;
     for (i = 0; i < B; i++)
@@ -161,11 +171,12 @@ void getfirstcol<Precision::HEADS>(bin& A, vout v)
 
 template<enum Precision = Precision::PAIRS>
 void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo, 
-                bin& A, binout& A_new, int ii, int jj, int iter)
+                bin& A, binout& A_new, fp_type& blockDelta, int ii, int jj, int iter)
 {
     int i, j;
     fp_type tmp;
     fp_type left, top, right, bottom;
+    fp_type fullResult, deltaErr = 0.0;
 
     for (i = 0; (i < B); i++)
     {
@@ -177,17 +188,29 @@ void jacobi(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo,
             right = (j == B - 1 ? righthalo[i] : A.full[i * B + j + 1]);
             bottom = (i == B - 1 ? bottomhalo[i] : A.full[(i + 1) * B + j]);
 
-            A_new.full[i * B + j] = 0.2 * (A.full[i * B + j] + left + top + right + bottom);
+            // A_new.pairs[i * B + j] = 0.2 * (A.pairs[i * B + j] + left + top + right + bottom);
+            fullResult = 0.2 * (A.full[i * B + j] + left + top + right + bottom);
+            A_new.full[i * B + j] = fullResult;
+
+            // record difference between full result and stored value
+            // blockDelta += std::fabs(fullResult - A_new.pairs[i * B + j])
+            fp_type deltaTmp = blockDelta;
+            fp_type y = std::fabs(fullResult - A_new.full[i * B + j]) + deltaErr;
+            
+            blockDelta = deltaTmp + y;
+            deltaErr = deltaTmp - blockDelta;
+            deltaErr += y;
         }
     }
 }
 template<>
 void jacobi<Precision::HEADS>(vin lefthalo, vin tophalo, vin righthalo, vin bottomhalo, 
-                bin& A, binout& A_new, int ii, int jj, int iter)
+                bin& A, binout& A_new, fp_type& blockDelta, int ii, int jj, int iter)
 {
     int i, j;
     fp_type tmp;
     fp_type left, top, right, bottom;
+    fp_type fullResult, deltaErr = 0.0;
 
     for (i = 0; (i < B); i++)
     {
@@ -199,59 +222,30 @@ void jacobi<Precision::HEADS>(vin lefthalo, vin tophalo, vin righthalo, vin bott
             right = (j == B - 1 ? righthalo[i] : A.heads[i * B + j + 1]);
             bottom = (i == B - 1 ? bottomhalo[i] : A.heads[(i + 1) * B + j]);
 
-            A_new.heads[i * B + j] = 0.2 * (A.heads[i * B + j] + left + top + right + bottom);
+            // A_new.pairs[i * B + j] = 0.2 * (A.pairs[i * B + j] + left + top + right + bottom);
+            
+            fullResult = 0.2 * (A.heads[i * B + j] + left + top + right + bottom);
+            A_new.heads[i * B + j] = fullResult;
+
+
+            // record difference between full result and stored value
+            // blockDelta += std::fabs(fullResult - A_new.heads[i * B + j])
+            fp_type deltaTmp = blockDelta;
+            fp_type y = std::fabs(fullResult - A_new.heads[i * B + j]) + deltaErr;
+            
+            blockDelta = deltaTmp + y;
+            deltaErr = deltaTmp - blockDelta;
+            deltaErr += y;
         }
     }
-}
 
-template<class Arr>
-inline double blockdelta(Arr& A_new, Arr& A)
-{
-	double delta = -__DBL_MAX__;
-	for (int i = 0; (i < B); ++i)
+	if(blockDelta > AdaptivePrecisionBound)
 	{
-		for (int j = 0; j < B; ++j)
-		{
-			double diff = fabs(A_new[i * B + j] - A[i * B + j]);
-			if(diff > delta) delta = diff;
-		}
+		printf("precision switch at iteration %d: ii=%d, jj=%d\n", iter, ii, jj);
+		for(int i = 0; i < B; ++i)
+			for(int j = 0; j < B; ++j)
+				A_new.full[i * B + j] = A_new.heads[i * B + j];
 	}
-	return delta;
-}
-
-double maxdelta(int iters)
-{
-	double dmax = -__DBL_MAX__;
-
-	#pragma omp parallel for schedule(static) reduction(max: dmax)
-	for (int ii = 0; ii < NB; ++ii)
-	{
-		for (int jj = 0; jj < NB; ++jj)
-		{
-			if(BlockPrecision[ii][jj] == Precision::HEADS)
-			{
-				double blockmax = blockdelta(A_new[ii][jj].heads, A[ii][jj].heads);
-				if(dmax < blockmax) dmax = blockmax;
-
-				// do copy from heads to full if block delta is small enough
-				if(blockmax < AdaptivePrecisionBound)
-				{
-					printf("block[%d][%d] switch at iter %d\n", ii, jj, iters);
-					BlockPrecision[ii][jj] = Precision::PAIRS;
-					for (int i = 0; (i < B); ++i)
-						for (int j = 0; j < B; ++j)
-							A_new[ii][jj].full[i * B + j] = A_new[ii][jj].heads[i * B + j];
-				}
-			}
-			else if(BlockPrecision[ii][jj] == Precision::PAIRS)
-			{
-				double blockmax = blockdelta(A_new[ii][jj].full, A[ii][jj].full);
-				if(dmax < blockmax) dmax = blockmax;
-			}
-		}
-	}
-
-	return dmax;
 }
 
 void compute(int niters)
@@ -260,104 +254,77 @@ void compute(int niters)
     int ii, jj;
     fp_type lefthalo[B], tophalo[B], righthalo[B], bottomhalo[B];
 
-	double delta = 2.0;
-	double epsilon = 1e-7;
+	// double delta = 2.0;
+	// double epsilon = 1e-4;
 
-	iters = 0;
-    // for (iters = 0; iters < niters; iters++)
-	while(iters < niters)
+	// iters = 0;
+    for (iters = 0; iters < niters; iters++)
+	// while(delta > epsilon)
     {
 		++iters;
-
         #pragma omp parallel \
             private(iters, ii, jj, lefthalo, tophalo, righthalo, bottomhalo) \
-            shared(A, A_new, BlockPrecision) 
+            shared(A, A_new, blockDelta) 
         {
             #pragma omp for schedule(static)
             for (ii = 0; ii < NB; ii++)
             {
                 for (jj = 0; jj < NB; jj++)
                 {
-                   if(BlockPrecision[ii][jj] == Precision::HEADS)
-				   {
-					    if (ii > 0)
-                        	getlastrow<Precision::HEADS>(A[ii - 1][jj], tophalo);
-						else
-							clear(tophalo);
-
-						if (jj > 0)
-							getlastcol<Precision::HEADS>(A[ii][jj - 1], lefthalo);
-						else
-							clear(lefthalo);
-
-						if (ii < NB - 1)
-							getfirstrow<Precision::HEADS>(A[ii + 1][jj], bottomhalo);
-						else
-							clear(bottomhalo);
-
-						if (jj < NB - 1)
-							getfirstcol<Precision::HEADS>(A[ii][jj + 1], righthalo);
-						else
-							clear(lefthalo);
-
-                        jacobi<Precision::HEADS>(lefthalo, tophalo, righthalo, bottomhalo, A[ii][jj], A_new[ii][jj], ii, jj, iters);
-				   }
+                    if (ii > 0)
+                        getlastrow(A[ii - 1][jj], tophalo);
                     else
-					{
-						if (ii > 0)
-                        	getlastrow<Precision::PAIRS>(A[ii - 1][jj], tophalo);
-						else
-							clear(tophalo);
+                        clear(tophalo);
 
-						if (jj > 0)
-							getlastcol<Precision::PAIRS>(A[ii][jj - 1], lefthalo);
-						else
-							clear(lefthalo);
+                    if (jj > 0)
+                        getlastcol(A[ii][jj - 1], lefthalo);
+                    else
+                        clear(lefthalo);
 
-						if (ii < NB - 1)
-							getfirstrow<Precision::PAIRS>(A[ii + 1][jj], bottomhalo);
-						else
-							clear(bottomhalo);
+                    if (ii < NB - 1)
+                        getfirstrow(A[ii + 1][jj], bottomhalo);
+                    else
+                        clear(bottomhalo);
 
-						if (jj < NB - 1)
-							getfirstcol<Precision::PAIRS>(A[ii][jj + 1], righthalo);
-						else
-							clear(lefthalo);
+                    if (jj < NB - 1)
+                        getfirstcol(A[ii][jj + 1], righthalo);
+                    else
+                        clear(lefthalo);
 
-                        jacobi<Precision::PAIRS>(lefthalo, tophalo, righthalo, bottomhalo, A[ii][jj], A_new[ii][jj], ii, jj, iters);
-					}
+                    if(blockDelta[ii][jj] > AdaptivePrecisionBound) // suggested delta
+                        jacobi<Precision::PAIRS>(lefthalo, tophalo, righthalo, bottomhalo, A[ii][jj], A_new[ii][jj], blockDelta[ii][jj], ii, jj, iters);
+                    else
+                        jacobi<Precision::HEADS>(lefthalo, tophalo, righthalo, bottomhalo, A[ii][jj], A_new[ii][jj], blockDelta[ii][jj], ii, jj, iters);
                 } // jj
             } // ii
         } // end parallel
-
-		delta = maxdelta(iters);
-		printf("iteration %d: delta = %e\n", iters, delta);
 
 		// yes, this is an inefficient copy
 		// however, this is required to avoid segmentation fault
 		// because of some issue with constructor/deconstructor and
 		// memory allocation/deallocation i have not had time to
-		// diagnose.
+		// diagnose
         // memcpy(A, A_new);
-		#pragma omp parallel for schedule(static) shared(A, A_new)
 		for(int i = 0; i < NB; ++i)
 		{
 			for(int j = 0; j < NB; ++j)
 			{
-				if(BlockPrecision[i][j] == Precision::HEADS)
+				for(int k = 0; k < B; ++k)
 				{
-					for(int k = 0; k < B; ++k)
-						for(int l = 0; l < B; ++l)
-							A[i][j].heads[k * B + l] = A_new[i][j].heads[k * B + l];
-				}
-				else
-				{
-					for(int k = 0; k < B; ++k)
-						for(int l = 0; l < B; ++l)
-							A[i][j].full[k * B + l] = A_new[i][j].full[k * B + l];
+					for(int l = 0; l < B; ++l)
+					{	
+						A[i][j].heads[k * B + l] = A_new[i][j].heads[k * B + l];
+						A[i][j].full[k * B + l] = A_new[i][j].full[k * B + l];
+					}
 				}
 			}
 		}
+
+		/*
+			TODO: please convert this .pairs stuff
+			to .full and make it work. please, thank you.
+		*/
+
     } // iter
 }
 
@@ -395,7 +362,7 @@ int main(int argc, char *argv[])
         int ii, jj, i, j;
         for (ii = 0; ii < NB; ++ii)
             for (jj = 0; jj < NB; ++jj)
-                if(BlockPrecision[ii][jj] == Precision::PAIRS)
+                if(blockDelta[ii][jj] > AdaptivePrecisionBound)
 					for (i = 0; i < B; ++i)
 						for (j = 0; j < B; ++j)
 							fprintf(outFile, "full -> %.15f\n", (double)(A[ii][jj].full[i * B + j]));

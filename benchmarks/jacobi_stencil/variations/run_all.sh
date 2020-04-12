@@ -1,8 +1,8 @@
 #!/bin/bash
 
-VAR="nb16_b256" # nb32_b128 nb32_b512 nb64_b64 nb64_b256 nb128_b32 nb128_b128 nb256_b16 nb256_b64 nb512_b32"
+VAR="nb16_b256 nb32_b128 nb32_b512 nb64_b256 nb128_b32 nb128_b128"
 
-JS="J_jacobi_up jacobi_omp jacobi_mod jacobi_mod_omp"
+JS="jacobi_omp jacobi_mod_omp"
 
 ITER=1000 #0
 
