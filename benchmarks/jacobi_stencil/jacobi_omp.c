@@ -32,8 +32,8 @@
 #include <math.h>
 #include <time.h>
 
-#define NB 16
-#define B 64
+#define NB 32
+#define B 128
 #define FALSE (0)
 #define TRUE (1)
 

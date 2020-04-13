@@ -36,8 +36,8 @@
 
 using namespace ManSeg;
 
-#define NB 16
-#define B 64
+#define NB 32
+#define B 128
 #define FALSE (0)
 #define TRUE (1)
 
@@ -265,6 +265,7 @@ void compute(int niters)
 
 	iters = 0;
     // for (iters = 0; iters < niters; iters++)
+	// while((delta > epsilon) && (iters < niters))
 	while(iters < niters)
     {
 		++iters;
@@ -359,6 +360,11 @@ void compute(int niters)
 			}
 		}
     } // iter
+
+	if(iters >= niters)
+		printf("hit max iters\n");
+	if(delta <= epsilon)
+		printf("converged to %e\n", delta); 
 }
 
 int main(int argc, char *argv[])
@@ -398,11 +404,11 @@ int main(int argc, char *argv[])
                 if(BlockPrecision[ii][jj] == Precision::PAIRS)
 					for (i = 0; i < B; ++i)
 						for (j = 0; j < B; ++j)
-							fprintf(outFile, "full -> %.15f\n", (double)(A[ii][jj].full[i * B + j]));
+							fprintf(outFile, "%.15f\n", (double)(A[ii][jj].full[i * B + j]));
 				else
 					for (i = 0; i < B; ++i)
 						for (j = 0; j < B; ++j)
-							fprintf(outFile, "heads -> %.15f\n", (double)(A[ii][jj].heads[i * B + j]));
+							fprintf(outFile, "%.15f\n", (double)(A[ii][jj].heads[i * B + j]));
 
         fclose(outFile);
     }
