@@ -9,7 +9,7 @@
 #include "vector.h"
 #include "matrix.h"
 
-void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int maxiter, FLOAT umbral, int step_check, int *in_iter)
+void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int maxiter, FLOAT umbral, int step_check, int *in_iter, bool *precision_increase)
 {
     int iter = 0;
     FLOAT2 alpha, beta;
@@ -52,6 +52,8 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
 
 	FLOAT2 x_norm_prev, x_norm;
 	x_norm_prev = 0;
+	FLOAT *x_prev = CALLOC(FLOAT, n);
+	bool switching = false;
 
 	// tol = recurrence residual
 	// residual = true residual
@@ -60,30 +62,61 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
 		// w = Ap(k+1)
 		floatm_mult(A, p, z);
 
+		// if(switching) break;
+
 		if (step < step_check) {
 			step++;
 		}
 		else {
 			floatm_mult(A, x, tr);		 // tr = Ax
-
-			// not great performance, but better than most things
-			/* if(!A->useTail)
-			{
-				x_norm = floatm_norm2(n, x); // <-- expensive, so we only do every step
-				double vv = fabs(x_norm_prev-x_norm)/x_norm_prev; // percentage change
-				// printf("abs(x_diff/x_norm_prev) = %e\n", vv);
-				if(vv < 1e-5)
-					mat_increase_precision(A);
-				else
-					x_norm_prev = x_norm;
-			} */
-
 			floatm_xpby(n, b, -1.0, tr); // tr = b - Ax
 			residual = floatm_norm2(n, tr);
 			printf("# rescheck: total_cg_iter=%d current_iter=%d tol=%e resid=%e\n", *in_iter, iter, (double)tol, (double)residual);
 
 			double explicit_residual_deviation = residual/tol;
 
+			// not great performance, but better than most things
+			// it's not better at all, it's just bad in roughly the same amount of
+			// situations
+			if(!A->useTail) {
+				/* double vv = fabs(x_norm_prev-x_norm)/x_norm_prev; // percentage change
+				printf("abs(x_diff/x_norm_prev) = %e\n", vv);
+				if(vv < 1e-5)
+				{
+					*precision_increase = true;
+					mat_increase_precision(A);
+					printf("increased precision at %d\n", *in_iter);
+					// break;
+				}
+				else
+				{
+					x_norm_prev = x_norm;
+				} */
+
+				float max_diff = floatm_max_diff_and_copy(n, x, x_prev);
+				printf("max diff = %e\n", max_diff);
+				if(max_diff <= 5e-3) {
+					printf("switching precision at iteration %d\n", *in_iter);
+					*precision_increase = true;
+					// switching = true;
+					mat_increase_precision(A);
+				}
+				// else {
+				// 	floatm_copy(n, x, x_prev);
+				// }
+				/* float min_diff = floatm_min_diff(n, x, x_prev);
+				printf("min diff = %e\n", min_diff);
+				if(min_diff <= 5e-5) {
+					printf("switching precision at iteration %d\n", *in_iter);
+					*precision_increase = true;
+					// switching = true;
+					mat_increase_precision(A);
+				}
+				else {
+					floatm_copy(n, x, x_prev);
+				} */
+			}
+			
 			if (explicit_residual_deviation > 10) {
 				printf("broke out : iter = %d\n", *in_iter);
 				break;

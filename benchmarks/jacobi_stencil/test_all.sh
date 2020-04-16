@@ -2,7 +2,7 @@
 
 export OMP_NUM_THREADS=8
 
-ITER=10000
+ITER=5000
 
 JACOBI="jacobi_omp jacobi_mod_omp"
 

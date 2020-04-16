@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=gnu99 -Wall -O3 -mavx -fopenmp
+CFLAGS = -std=gnu99 -Wall -O3 -mavx2 -fopenmp
 LDFLAGS = -lm -lrt -fopenmp
 
 .SECONDARY:

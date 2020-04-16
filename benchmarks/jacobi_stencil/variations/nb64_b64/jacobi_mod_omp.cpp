@@ -32,7 +32,7 @@
 #include <time.h>
 #include <algorithm>
 #include <cmath>
-#include "../../mantissaSegmentation_dev.hpp"
+#include "../../../../mantissaSegmentation_dev.hpp"
 
 using namespace ManSeg;
 
@@ -440,7 +440,7 @@ int main(int argc, char *argv[])
 
     printf("Running time  = %g %s\n", time_taken, "s");
 
-    FILE *outFile;
+    /* FILE *outFile;
     outFile = fopen("./jacobi_mod_omp_values.txt", "w");
     if (outFile == NULL)
     {
@@ -462,7 +462,7 @@ int main(int argc, char *argv[])
 							fprintf(outFile, "%.15f\n", (double)(A[ii][jj].heads[i * B + j]));
 
         fclose(outFile);
-    }
+    } */
 
     return 0;
 }

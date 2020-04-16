@@ -30,16 +30,16 @@ class matrix_csr : public matrix
 public:
     int n;
     int *i, *j;
-    double *A;
-    // ManSegArray *A;
+    // double *A;
+    ManSegArray *A;
 };
 
 class matrix_dense : public matrix
 {
 public:
     int n;
-    double *A;
-    // ManSegArray *A;
+    // double *A;
+    ManSegArray *A;
 };
 
 class precond_jacobi : public matrix

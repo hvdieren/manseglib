@@ -18,7 +18,7 @@
 // #define USE_DENSE
 #define USE_PRECOND
 
-void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *x, int out_maxiter, DOUBLE out_tol, 
+void iterative_refinement(int n, matrix *A, matrix *M, DOUBLE *b, DOUBLE *b_dash, DOUBLE *x, int out_maxiter, DOUBLE out_tol, 
     int in_maxiter, DOUBLE in_tol, int step_check, int *out_iter, int *in_iter);
 
 int main(int argc, char *argv[])
@@ -40,14 +40,26 @@ int main(int argc, char *argv[])
     matrix *A = csr_create(n, nz, coo);
 #endif
 
+	// increase precision before doing b = As
+	// mat_increase_precision(A);
+
     DOUBLE *x = ALLOC(DOUBLE, n); // unknown vector x (what we want to find)
-    DOUBLE *b = ALLOC(DOUBLE, n); // well-known vector
+    DOUBLE *b = ALLOC(DOUBLE, n); // well-known vector (high)
+	DOUBLE *b_dash = ALLOC(DOUBLE, n); // well-knoown vector (low)
     DOUBLE *r = ALLOC(DOUBLE, n); // residual vector
     DOUBLE *s = ALLOC(DOUBLE, n); // randomised starting point (i think)
 
     vector_rand(n, s); // randomise "starting point"
     // vector_set(n, 1.0 / sqrt(n), s);
+
+	// create low precision copy
+	matrix_mult(A, s, b_dash);
+	// increase to get high precision version
+	mat_increase_precision(A);
     matrix_mult(A, s, b); // b = As
+	// reduce again before we start computation
+	mat_reduce_precision(A);
+
 
     int out_maxiter = atoi(argv[2]);
     DOUBLE out_tol = atof(argv[3]);
@@ -104,7 +116,7 @@ int main(int argc, char *argv[])
 
     clock_gettime(CLOCK_MONOTONIC, &ir_start);
     // repeat cg until it converges on a solution or the residual error is too large
-    iterative_refinement(n, A, M, b, x, out_maxiter, out_tol, in_maxiter, in_tol, step_check,
+    iterative_refinement(n, A, M, b, b_dash, x, out_maxiter, out_tol, in_maxiter, in_tol, step_check,
                          &out_iter, &in_iter);
     clock_gettime(CLOCK_MONOTONIC, &ir_end);
 

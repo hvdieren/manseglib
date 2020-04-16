@@ -49,6 +49,11 @@ static inline void floatm_copy(int n, FLOAT *x, FLOAT *y) {
     for (int i = 0; i < n; i++) y[i] = x[i];
 }
 
+static inline void floatm_parallel_copy(int n, FLOAT *x, FLOAT *y) {
+    #pragma omp parallel for
+	for (int i = 0; i < n; i++) y[i] = x[i];
+}
+
 // y = y + x*a
 static inline void floatm_axpy(int n, FLOAT a, FLOAT *x, FLOAT *y) {
     for (int i = 0; i < n; i++) y[i] = y[i] + x[i] * a;
@@ -101,12 +106,30 @@ static inline void floatm_max_abs_diff(int n, FLOAT *x, FLOAT *y, FLOAT2* z, FLO
 	}
 }
 
-static inline FLOAT floatm_max_diff(int n, FLOAT *x, FLOAT *y) {
-	float max = -__FLT_MIN__;
+static inline FLOAT floatm_max_diff_and_copy(int n, FLOAT *x, FLOAT *y) {
+	float maxv = -__FLT_MIN__;
+	#pragma omp parallel for reduction(max: maxv)
+	for(int i = 0; i < n; i++) {
+		float val = fabsf(x[i] - y[i]);
+		y[i] = x[i];
+		
+		if(val > maxv)
+			maxv = val;
+	}
+
+	return maxv;
+}
+
+// this will be more aggressive than max diff in terms of switching
+// since we are only looking for the smallest value
+// not that the "biggest" value is smaller than threshold
+static inline FLOAT floatm_min_diff(int n, FLOAT *x, FLOAT *y) {
+	float max = __FLT_MAX__;
+	// #pragma omp parallel for reduction(min: max)
 	for(int i = 0; i < n; i++) {
 		float val = fabsf(x[i] - y[i]);
 		
-		if(val > max)
+		if(val < max)
 			max = val;
 	}
 

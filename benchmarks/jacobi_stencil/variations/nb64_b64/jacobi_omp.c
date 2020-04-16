@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
 
     printf("Running time  = %g %s\n", time_taken, "s");
 
-    FILE *outFile;
+    /* FILE *outFile;
     outFile = fopen("./jacobi_omp_values.txt", "w");
     if (outFile == NULL)
     {
@@ -284,7 +284,7 @@ int main(int argc, char *argv[])
                         fprintf(outFile, "%.15f\n", A[ii][jj][i * B + j]);
 
         fclose(outFile);
-    }
+    } */
 
     
 

@@ -27,7 +27,7 @@ jacobi_omp: jacobi_omp.c
 
 ## jacobi with manseg library *only*
 .PHONY: jacobi_mod.o
-jacobi_mod.o: jacobi_mod.cpp ../../mantissaSegmentation.hpp
+jacobi_mod.o: jacobi_mod.cpp ../../mantissaSegmentation_dev.hpp
 	$(CCX) $(CCXFLAGS) -c jacobi_mod.cpp
 
 jacobi_mod: jacobi_mod.o
@@ -36,7 +36,7 @@ jacobi_mod: jacobi_mod.o
 
 ## jacobi using manseg library with omp
 .PHONY: jacobi_mod_omp.o
-jacobi_mod_omp.o: jacobi_mod_omp.cpp ../../mantissaSegmentation.hpp
+jacobi_mod_omp.o: jacobi_mod_omp.cpp ../../mantissaSegmentation_dev.hpp
 	$(CCX) $(CCXOMPFLAGS) -c jacobi_mod_omp.cpp
 
 jacobi_mod_omp: jacobi_mod_omp.o
