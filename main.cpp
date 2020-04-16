@@ -6,12 +6,9 @@
 #include <chrono>
 #include <math.h>
 
-// #include "mantissaSegmentation.hpp"
-// #include "mantissaSegmentation_f.hpp"
 #include "mantissaSegmentation_dev.hpp"
-#include "matrix.h"
-#include "vector.h"
-#include <numa.h>
+// #include "matrix.h"
+// #include "vector.h"
 
 
 using namespace ManSeg;
@@ -54,7 +51,7 @@ void printBinary(int l)
     }
 }
 
-int main5(int argc, char** argv)
+/* int main5(int argc, char** argv)
 {
     const int m_size = 4;
     double x[m_size*m_size] = {
@@ -100,7 +97,7 @@ int main5(int argc, char** argv)
     std::cout << "prod of m= " << prod(&m, m_size) << '\n';
 
     return 0;
-}
+} */
 
 template<class TwoSegArray>
 double sum(TwoSegArray& t, int n)
@@ -122,23 +119,121 @@ double sum(double* t, int n)
     return sum;
 }
 
-template<typename F1, typename F2>
-double tmplFoo(F1 a, F2 b)
-{
-	return (a + b);
-}
-
+#define nbsize 2
+ManSegArray m1[nbsize][nbsize];
+ManSegArray m2[nbsize][nbsize];
+double* d1[nbsize][nbsize];
+double* d2[nbsize][nbsize];
 int main()
 {
-	auto itmplFoo = tmplFoo<int, int>;
-	auto dftmplFoo = tmplFoo<double, float>;
+	// allocate and fill
+	for(int i = 0; i < nbsize; ++i)
+	{
+		for(int j = 0; j < nbsize; ++j)
+		{
+			d1[i][j] = new double[nbsize*nbsize];
+			d2[i][j] = new double[nbsize*nbsize];
+			
+			m1[i][j].alloc(nbsize*nbsize);
+			m1[i][j].full = new double[nbsize*nbsize];
 
-	std::cout << "itmplFoo(3, 4) = " << itmplFoo(3, 4) << "\n";
-	std::cout << "dtmplFoo(3.5, 4.f) = " << dftmplFoo(3.5, 4.f) << "\n";
+			m2[i][j].alloc(nbsize*nbsize);
+			m2[i][j].full = new double[nbsize*nbsize];
+
+			for(int k = 0; k < nbsize; ++k)
+			{
+				for(int l = 0; l < nbsize; ++l)
+				{
+					d1[i][j][k*nbsize + l] = l+1;
+					d2[i][j][k*nbsize + l] = l+1 + (nbsize*nbsize);
+					m1[i][j].pairs[k*nbsize + l] = l+1;
+					m2[i][j].pairs[k*nbsize + l] = l+1 + (nbsize*nbsize);
+				}
+			}
+		}
+	}
+	
+	for(int iteration = 0; iteration < 10; ++iteration)
+	{
+		// make some change to some values
+		for(int i = 0; i < nbsize; ++i)
+		{
+			for(int j = 0; j < nbsize; ++j)
+			{
+				for(int k = 0; k < nbsize; ++k)
+				{
+					for(int l = 0; l < nbsize; ++l)
+					{
+						d2[i][j][k*nbsize + l] += l + (nbsize*nbsize);
+						m2[i][j].pairs[k*nbsize + l] += l + (nbsize*nbsize);
+					}
+				}
+			}
+		}
+
+		for(int i = 0; i < nbsize; ++i)
+		{
+			for(int j = 0; j < nbsize; ++j)
+			{
+				for(int k = 0; k < nbsize; ++k)
+				{
+					for(int l = 0; l < nbsize; ++l)
+					{
+						std::cout << k*nbsize + l << ":d1 " << d1[i][j][k*nbsize+l] << "| "; 
+						std::cout << k*nbsize + l << ":m1 " << m1[i][j].pairs[k*nbsize+l] << "\t\t"; 
+						std::cout << k*nbsize + l << ":d2 " << d2[i][j][k*nbsize+l] << "| "; 
+						std::cout << k*nbsize + l << ":m2 " << m2[i][j].pairs[k*nbsize+l] << "\n"; 
+					}
+				}
+				std::cout << std::endl;
+			}
+		}
+
+		// swap does not work
+		// causes double deallocation for some reason
+		// and idk how 
+
+		// this works here, but does not work
+		// for jacobi, so..?
+		std::cout << "*swap*" << std::endl;
+		std::swap(*m1, *m2);
+		std::swap(d1, d2);
+
+		// print and things should be swapped
+		for(int i = 0; i < nbsize; ++i)
+		{
+			for(int j = 0; j < nbsize; ++j)
+			{
+				for(int k = 0; k < nbsize; ++k)
+				{
+					for(int l = 0; l < nbsize; ++l)
+					{
+						std::cout << k*nbsize + l << ":d1 " << d1[i][j][k*nbsize+l] << "| "; 
+						std::cout << k*nbsize + l << ":m1 " << m1[i][j].pairs[k*nbsize+l] << "\t\t"; 
+						std::cout << k*nbsize + l << ":d2 " << d2[i][j][k*nbsize+l] << "| "; 
+						std::cout << k*nbsize + l << ":m2 " << m2[i][j].pairs[k*nbsize+l] << "\n"; 
+					}
+				}
+				std::cout << "\n" << std::endl;
+			}
+		}
+	}
+
+	// clean up
+	for(int i = 0; i < nbsize; ++i)
+	{
+		for(int j = 0; j < nbsize; ++j)
+		{
+			m1[i][j].delSegments();
+			m2[i][j].delSegments();
+		}
+	}
 
 	return 0;
+}
 
-
+int main002()
+{
     const int size = 10;
     ManSegArray a(size);
 
@@ -158,7 +253,7 @@ int main()
     std::cout << "sum (heads)=" << sum<HeadsArray>(a.heads, size) << "\n";
     std::cout << "sum (pairs)=" << sum<PairsArray>(a.pairs, size) << "\n";
     // copy values
-    a.precisionSwitch();
+    a.copytoIEEEdouble();
     std::cout << "sum (full)=" << sum(a.full, size) << "\n";
     // use full
     std::cout << "regular doubles\n";
@@ -284,38 +379,3 @@ int main01(int argc, char** argv)
 
     return 0;
 }
-
-
-
-// int main(int argc, char** argv)
-// {
-//     // what i want to do:
-//     // take double, split into two parts (floats)
-//     // take parts, reassemble
-
-//     // todo: try converting mantissaSegmentation_f to use ints? again as underlying type but __m64 potentially (vector of ints)
-//     // should then be able to convert directly from __m64 -> double, or from __m128d -> __m64 ->> at no cost <<-
-
-//     double d = 1.2;
-//     std::cout << "begin with = " << d << "\n";
-    
-//     __m128d init = {d, 0};
-//     __m128 fl = _mm_castpd_ps(init);
-
-//     for(int i = 0; i < 2; ++i)
-//         std::cout << init[i] << "\n";
-    
-//     std::cout << "\n";
-
-//     // fl[0] = tail, fl[1] = head
-//     for(int i = 0; i < 4; ++i)
-//         std::cout << fl[i] << "\n";
-
-//     __m128d d_out = _mm_castps_pd(fl);
-//     double res;
-//     res = d_out[0];
-
-//     std::cout << "res = " << res << "\n";    
-
-//     return 0;
-// }
