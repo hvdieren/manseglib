@@ -20,6 +20,8 @@ constexpr double tol = 1e-7;
 constexpr int maxIter = 100;
 // constexpr int maxIter = 200;   // double potential iterations to counter this..?
 
+double addedConstant;
+
 enum MatrixType {COO, CSR, CSC, SNAP_COO, SNAP_CSR, SNAP_CSC};
 
 template<int matrixType>
@@ -390,11 +392,26 @@ public:
             exit(1);
         }
 
-       string line, nodes, edges;
-        getline(f, line); // skip first line
+        string line, nodes, edges;
+		do
+		{
+	        getline(f, line); // skip first line
+			cout << "got line " << line << endl;
+		} while(line.find("Node") == string::npos);
+		// cout << "exited with line =" << line << endl;
 
-        f >> nodes >> edges;
-        getline(f, line);
+		stringstream ss;
+		ss << line;
+
+		ss >> line; // skip #
+		ss >> line; // skip Nodes: 
+		ss >> nodes;
+		ss >> line; // skip Edges: 
+		ss >> edges;
+
+		// cout << "nodes = " << nodes << ", edges = " << edges << endl;
+
+        // getline(f, line);
 
         string n = regex_replace(nodes, regex("[^0-9]*([0-9]+).*"), "$1");
         numVertices = atoi(n.c_str());
@@ -408,7 +425,7 @@ public:
         index = new int[numVertices + 1];
         // source = new int[numEdges];
 
-        getline(f, line);  // skip next line
+        // getline(f, line);  // skip next line
 
         // read in edges as COO
         int* src = new int[numEdges];
@@ -523,6 +540,7 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
     double* contr = new double[n]; // contribution for each vertex
 
     double delta = 2.0;
+	double prevDelta = 2.0;
     int iter = 0;
 
     const double oneOverN = 1.0 / (double)(n);
@@ -541,13 +559,16 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
 
     auto iterateS = chrono::high_resolution_clock::now();
 
+	cout << "iteration,delta,xnorm,time(s)" << endl;
+	// addedConstant = (1-d)*(1/(double)n);
     while(iter < maxIter && delta > tol)
     {
         matrix->iterate(d, x, y, outdeg, contr);
 
-        double w = (1.0 - sum(y, n))*oneOverN;
-        for(int i = 0; i < n; ++i)
-            y[i] += w;
+		// we have done newPr[d] = d*(pr[s]/outdeg[s])
+		double w = (1.0 - sum(y, n))*oneOverN;
+		for(int i = 0; i < n; ++i)
+			y[i] += w;
 
         delta = normDiff(x, y, n);
         ++iter;
@@ -562,6 +583,16 @@ void pr(SparseMatrix* matrix, std::chrono::time_point<std::chrono::_V2::system_c
         cout << "iteration " << iter << ": delta=" << delta << " xnorm=" << sum(x, n) 
             << " time=" << tmStep << " seconds" << endl;
         tmStart = chrono::high_resolution_clock::now();
+
+		{
+			double ratio = prevDelta/delta;
+			cout  << "ratio = " << ratio << "\n";
+			// cout << "% change = " << (prevDelta-delta)/prevDelta << "\n";
+			// if(ratio <= threshold)
+			// 	break;
+		}
+
+		prevDelta = delta;
     }
     auto endT = chrono::high_resolution_clock::now();
 

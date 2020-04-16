@@ -192,7 +192,7 @@ void Compute(GraphType &GA, long start)
     intT m = GA.m;
     const double damping = 0.85;
     const double epsilon = 0.0000001;
-    const double float_limit = 5e-6f;    // switch limit = 0.0001 -> 1e-4
+    const double float_limit = 5e-5f;
     //Data Array
     //x and y to do special allocation
     //frontier also need special node allocation
@@ -214,7 +214,7 @@ void Compute(GraphType &GA, long start)
     double delta = 2.0;
     loop(j, part, perNode, p_curr_f[j] = one_over_n);
     loop(j, part, perNode, p_next_f[j] = 0.0f);
-
+	loop(j, part, perNode, p_next_d[j] = 0.0);
     cerr << setprecision(16);
 
     int count=0;
@@ -247,19 +247,14 @@ void Compute(GraphType &GA, long start)
         Frontier.del();
         Frontier = output;
 
-        if(delta < float_limit)
+        if(delta <= float_limit)
         {
-            cerr << "hit float limit\n";
+            cerr << "hit float limit at iter " << count << "\n";
             break;
         }
     }
 
     // interim (float -> double) step
-	// we don't need to copy the values from p_curr_f to p_curr_d since
-	// we don't use them in this iteration..
-    // loop(j, part, perNode, p_curr_d[j] = (double)p_curr_f[j]);
-	// we do need to initialise p_next_d to 0 though.
-	loop(j, part, perNode, p_next_d[j] = 0.);
 	if(count < MaxIter)
     {
         ++count;
@@ -306,6 +301,7 @@ void Compute(GraphType &GA, long start)
         delta = normDiff<double, double>(part, p_curr_d, p_next_d, n);
 		if(delta < epsilon)
         {
+            cerr << count << ": delta = " << delta << "\n";
             cerr << "successfully converged in " << count << " iterations\n";
             break;
         }

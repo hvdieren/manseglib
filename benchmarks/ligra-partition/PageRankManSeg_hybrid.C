@@ -471,10 +471,7 @@ void Compute(GraphType &GA, long start)
     p_curr.full = new double[partElem];
     p_next.full = new double[partElem];
 
-    double delta = 2.0, prev_delta = 2.0;
-	int check_freq = 4;
-	double threshold = 10;
-	int step = 0; 
+    double delta = 2.0;
 
     loop(j, part, perNode, p_curr.heads[j] = one_over_n);
     loop(j, part, perNode, p_next.heads[j] = 0.0);
@@ -515,19 +512,10 @@ void Compute(GraphType &GA, long start)
         cerr << count << ": delta = " << delta << "  xnorm = " << sumArray<HeadsArray>(part, p_curr.heads, n) << "\n";
         // ensure swap & reset happens *before* breaking from loop
         
-		++step;
-		if(step == check_freq)
+		if(delta <= AdaptivePrecisionBound)
 		{
-			double ratio = prev_delta / delta;
-			cout << "ratio = " << ratio << "\n";
-			if(ratio <= threshold)
-			{
-				cerr << "switching precsion at iter " << count << "\n";
-				break;
-			}
-
-			prev_delta = delta;
-			step = 0;
+			cerr << "switching precision at iter " << count << "\n";
+			break;
 		}
     }
 
@@ -592,7 +580,8 @@ void Compute(GraphType &GA, long start)
         delta = normDiff(part, p_curr.full, p_next.full, n);
 		if(delta < epsilon)
         {
-            cerr << "successfully converged in" << count " iterations\n";
+            cerr << count << ": delta = " << delta << "\n";
+            cerr << "successfully converged in " << count << " iterations\n";
             break;
         }
         cerr << count << ": delta = " << delta << "  xnorm = " << sumArray(part, p_curr.full, n) << "\n";
@@ -611,6 +600,8 @@ void Compute(GraphType &GA, long start)
 
     // clean up memory
     Frontier.del();
-	p_curr.del_segments();
-	p_next.del_segments();
+	p_curr.delSegments();
+	p_curr.del();
+	p_next.delSegments();
+	p_next.del();
 }

@@ -35,15 +35,6 @@ namespace ManSeg
             *head = *o.head;
         }
 
-        /* 
-            These equals operators must either be combined into a generic template function and
-            therefore could result in extra conversions when copying data.
-            If we want to keep the specialisation, then we need to either move the definition into
-            a separate .cpp file and compile a .o file for the library, or we can declare them
-            inline, as that allows multiple redefinitions.
-            Considering it is only for a few functions, (the TwoSegArray class specialisations must be
-            kept in this file) it seems like a reasonable compromise.
-        */
         template<typename T>
         inline Head& operator=(const T& rhs);
         template<typename T>
@@ -72,9 +63,9 @@ namespace ManSeg
         Class representing the "pair" of segments of a double.
         It is defined for ease of manipulating the values in an object of type TwoSegArray<true>.
         Each segment (which consists of a head and tail) is 32 bits.
-        The head contains the sign bit, full 11 bit exponent, and 20 bits of mantissa, 
+        The "head" contains the sign bit, full 11-bit exponent, and 20 bits of mantissa, 
         for a total of 32 bits.
-        The tail segment contains the remaining 32 bits of mantissa.
+        The "tail" contains the remaining 32 bits of mantissa.
     */
     class Pair
     {
@@ -130,6 +121,8 @@ namespace ManSeg
         User is required to manage de-allocation of memory manually, using the del()
         function, as the deconstructor does not free this space.
         Operations performed on values in the array are exactly the same as standard IEEE-754 doubles, but a bit slower due to combining of head and tail segments.
+
+		Note: the class deconstructor does not free space automatically, so use the delSegments and del functions to clean up.
     */
     template<>
     class TwoSegArray<true>
@@ -184,11 +177,12 @@ namespace ManSeg
         }
 
         /*
-            Returns *this (as we do not have any precision increase to do)
+            Returns object of the same type, with pointers to the same data values
+			as this object.
         */
         TwoSegArray<true> createFullPrecision()
         {
-            return *this;
+            return TwoSegArray<true>(heads, tails);
         }
 
         void alloc(const uint_fast64_t& length)
@@ -203,7 +197,6 @@ namespace ManSeg
             NOTE: this should only be called by one object with references to
             the same set of values (such as object created using createFullPrecision).
         */
-
         void del()
         {
             if(heads != nullptr) delete[] heads;
@@ -215,17 +208,13 @@ namespace ManSeg
     private:
         float* heads;
         float* tails;
-
-        static constexpr int segmentBits = 32;
-        static constexpr uint32_t tailMask = ~0;
-        static constexpr doublerep headMask = static_cast<doublerep>(tailMask) << segmentBits;
-
     };
 
     /*
         Specialisation of TwoSegArray.
         Operations performed on values in the array only modify the "head" segment
         (i.e. the first 32 bits of a double value) unless specified otherwise.
+		Note: the class deconstructor does not free space automatically, so use the delSegments and del functions to clean up.
     */
     template<>
     class TwoSegArray<false>
@@ -264,6 +253,7 @@ namespace ManSeg
             double d = t;
             __m128d d_v = _mm_set_pd(0.0, d);
             __m128 seg_v = _mm_castpd_ps(d_v);
+			tails[id] = seg_v[0];
             heads[id] = seg_v[1];
         }
 
@@ -566,18 +556,33 @@ namespace ManSeg
         return d;
     }
 
+	/* 
+		convenience typename for TwoSegArray that only accesses the "head" segment 
+		of a double precision number
+		i.e. reduced precision
+	*/
+    using HeadsArray = TwoSegArray<false>;
+
+	/* 
+		convenience typename for TwoSegArray that accesses the full 64 bits of
+		a double precision number
+		i.e. double precision
+	*/
+    using PairsArray = TwoSegArray<true>;
+
     /*
         Convenient type for use of TwoSegArray<false> and TwoSegArray<true> without having to manage two separate sets of arrays.
+		Note: the class deconstructor does not free space automatically, so use the delSegments and del functions to clean up.
         
         @heads - used to access only the first 32 bits of a double : [sign(1), exp(11), mantissa(20)]
-        @pairs - used to access all 64 bits of a double : [sign(1), exp(11), mantissa(52)] (slow, only for conversion)
-        @full - used to access all 64 bits of double, in the standard IEEE method (fast, recommended for regular use)
+        @pairs - used to access all 64 bits of a double : [sign(1), exp(11), mantissa(52)] (slow, but does not require extra memory)
+        @full - used to access all 64 bits of double, in the standard IEEE method (fast, recommended, but requires extra space)
     */
     class ManSegArray
     {
     public:
-        TwoSegArray<false> heads;
-        TwoSegArray<true> pairs;
+        HeadsArray heads;
+        PairsArray pairs;
         double* full;
 
         ManSegArray() { full = nullptr; }
@@ -598,6 +603,7 @@ namespace ManSeg
         */
         void alloc(const uint_fast64_t& length)
         {
+			this->length = length;
             heads.alloc(length);
             pairs = heads.createFullPrecision();
         }
@@ -633,9 +639,6 @@ namespace ManSeg
     private:
         uint_fast64_t length;
     };
-
-    using HeadsArray = TwoSegArray<false>;
-    using PairsArray = TwoSegArray<true>;
 }
 
 #endif

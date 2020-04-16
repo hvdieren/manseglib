@@ -217,6 +217,7 @@ void Compute(GraphType &GA, long start)
         delta = normDiff(part, p_curr, p_next, n);
         if(delta < epsilon)
         {
+            cerr << count << ": delta = " << delta << "\n";
             cerr << "successfully converged in " << count << " iterations\n";
             break;
         }

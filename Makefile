@@ -3,23 +3,25 @@ CCX=g++
 CCXFLAGS=-O3 -std=c++17 -mavx2
 
 all: 
-	make main
+	make main assem
 
 main: main.o matrix.o
-	${CCX} -o main main.o matrix.o
+	${CCX} -o main main.o matrix.o -lnuma
 
 .PHONY: main.o
 main.o: main.cpp mantissaSegmentation.hpp matrix.h vector.h
-	${CCX} ${CCXFLAGS} -c main.cpp 
-
-# mantissaSegmentation.o: mantissaSegmentation.cpp
-# 	${CCX} ${CCXFLAGS} -c mantissaSegmentation.cpp
+	${CCX} ${CCXFLAGS} -c main.cpp -lnuma
 
 matrix.o: matrix.cpp mantissaSegmentation.hpp
 	${CCX} ${CCXFLAGS} -c matrix.cpp
 
-tests: tests.o
-	g++ -o tests tests.o
+
+assem: assem.o
+	${CCX} -o assem assem.o
+
+.PHONY: assem.o
+assem.o: assem.cpp mantissaSegmentation.hpp
+	${CCX} ${CCXFLAGS} -c assem.cpp
 
 .PHONY: clean
 clean:

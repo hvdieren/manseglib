@@ -3,19 +3,19 @@
 # module load compilers/gcc-4.9.0
 
 export LD_LIBRARY_PATH="../../cilk-swan/lib/"  # req. lib
-export CILK_NWORKERS=4                                             # no. cpu threads
+export CILK_NWORKERS=1                                             # no. cpu threads
 #export LD_PRELOAD="./bin/interposer_cilk.so"                       # req. for cilk
 
 # note: large graphs should take about ~15 minutes to run
 # any longer than that and something has went wrong
 
-PR="PageRankUpdate PageRankUpdate_Floats PageRankManSeg PageRankManSeg_f PageRankUpdate_F2D PageRankManSeg_hybrid"
+PR="PageRankUpdate"
 #PR="PageRankManSeg_dev"
 
 BASE_PATH="graphs"
 
 date
-make ${PR} -j 4
+make ${PR}
 
 
 # use -rounds 10 and -c (no. cores * 16) [trying 48*16 rather than 96*16 for partitioning]
@@ -36,12 +36,12 @@ for alg in $PR
 		# echo "finish ${alg} friendster"
 		# echo ""
 
-		# echo "start ${alg} LiveJournal"
-		# date
-		# LD_PRELOAD="./bin/interposer_cilk.so" ./${alg} -c 768 -v edge -rounds 10 -b /var/shared/projects/asap/graphs/adj/Galois/LiveJournal_dir_b > pr_out/LiveJournal_dir_b_${alg}.txt 2>&1
-		# date
-		# echo "finish ${alg} LiveJournal"
-		# echo ""
+		echo "start ${alg} LiveJournal"
+		date
+		./${alg} -c 16 -v edge -rounds 1 -b $BASE_PATH/LiveJournal_dir_b
+		date
+		echo "finish ${alg} LiveJournal"
+		echo ""
 
 		# echo "start ${alg} orkut"
 		# date
@@ -50,12 +50,12 @@ for alg in $PR
 		# echo "finish ${alg} orkut"
 		# echo ""
 
-		echo "start ${alg} USAroad"
-		date
-		LD_PRELOAD="./bin/interposer_cilk.so" ./${alg} -c 128 -v edge -rounds 10 $BASE_PATH/USAroad_undir > pr_out/USAroad_undir_${alg}.txt 2>&1
-		date
-		echo "finish ${alg} USAroad"
-		echo ""
+		#echo "start ${alg} USAroad"
+		#date
+		#./${alg} -c 32 -v edge -rounds 1 $BASE_PATH/USAroad_undir
+		#date
+		#echo "finish ${alg} USAroad"
+		#echo ""
 #
 #		echo "start ${alg} power 100M"
 #		date
