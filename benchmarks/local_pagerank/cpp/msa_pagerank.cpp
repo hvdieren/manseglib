@@ -7,7 +7,7 @@
 #include <regex>
 #include <cmath>
 
-#include "../../../mantissaSegmentation_dev.hpp"
+#include "../../../manseglib.hpp"
 #include "quicksort.h"
 
 using namespace std;

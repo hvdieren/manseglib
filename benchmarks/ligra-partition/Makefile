@@ -45,7 +45,7 @@ COMMON=papi_code.h utils.h IO.h parallel.h gettime.h quickSort.h parseCommandLin
 
 ALL= BFS BC Components PageRank PageRankDelta BellmanFord SPMV BP PageRank PageRankBit PageRankConverage BPUpdate
 
-PR_Update=PageRankUpdate PageRankUpdate_Floats PageRankUpdate_F2D PageRankManSeg_hybrid
+PR_Update=PageRankUpdate PageRankUpdate_Floats PageRankUpdate_F2D PageRankManSeg
 #csc and coo mix, csc for less partition, coo for more partition, inner threshold is GA.m/2
 #HILBERT=0, COO will use COO_CSR. For VEBO graph , COO_CSR is faster choice.
 LIBS_I_NEED= -DEDGES_HILBERT=1

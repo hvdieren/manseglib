@@ -13,7 +13,7 @@
 #define FLOAT2 DOUBLE
 #endif
 
-#include "../../../mantissaSegmentation_dev.hpp"
+#include "../../../manseglib.hpp"
 
 #define ALLOC(t, l) (t*)malloc((l) * sizeof(t))
 #define CALLOC(t, l) (t*)calloc(sizeof(t),(l))

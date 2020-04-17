@@ -1,5 +1,5 @@
 #include <iostream>
-#include "mantissaSegmentation_dev.hpp"
+#include "../manseglib.hpp"
 
 int main()
 {

@@ -1,8 +1,60 @@
+/*
+	A header-based library for Mantissa (Significand) segmentation.
+	Author: Jordan Johnston (jjohnston499@qub.ac.uk)
+
+	Based on the basic idea of mantissa segmentation as detailed in "A Customized Precision format based on Mantissa Segmentation" (https://doi.org/10.1002/cpe.5418)
+	
+	Debug/trial version of the float/vector version of the library.
+*/
+
 #ifndef __MANSEG_LIB_H__
 #define __MANSEG_LIB_H__
 
 #include <stdint.h>
 #include <immintrin.h>
+#include <iostream>
+
+#ifndef DEBUG_FUNC_MANSEG
+#define DEBUG_FUNC_MANSEG
+// print binary of double
+void printBinary(double d)
+{
+    unsigned long l = *reinterpret_cast<unsigned long*>(&d);
+    for(int i = 63; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i == 63 || i == 52)
+            std::cout << " ";
+        else if(i == 32)
+            std::cout << "|";
+    }
+    std::cout << std::endl;
+}
+
+// print binary of float
+void printBinary(float f)
+{
+    unsigned int l = *reinterpret_cast<unsigned int*>(&f);
+    for(int i = 31; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i == 31 || i == 23)
+            std::cout << " ";
+    }
+    std::cout << std::endl;
+}
+
+// print binary of int
+void printBinary(int l)
+{
+    for(int i = 31; i >= 0; --i)
+    {
+        std::cout << ((l >> i) & 1);
+        if(i % 8 == 0 && i > 0)
+            std::cout << " ";
+    }
+}
+#endif
 
 namespace ManSeg
 {
@@ -10,9 +62,8 @@ namespace ManSeg
     typedef uint_fast64_t doublerep;
 
     /* Highest achievable precision with a single segment - i.e. TwoSegArray<false> */
-    constexpr double MaxSingleSegmentPrecision = 1e-6;
-    /* decimal precision: num_mantissa_bits*log10(2) = 6~ */
-	/* so we have approximately 6 digits of decimal precision */
+    constexpr double MaxSingleSegmentPrecision = 1e-5;
+    /* decimal precision: num_mantissa_bits*log10(2) = 6.02... */
     constexpr double AdaptivePrecisionBound = 5e-5;
 
     /*
@@ -21,7 +72,7 @@ namespace ManSeg
         It contains the sign bit, full 11 bit exponent, and 20 bits of mantissa, for a total
         of 32 bits.
         This gives less precision than IEEE-754 standard float.
-        It has a maximum precision of roughly 1e-6, with a recommended precision bound of 1.5e-6.
+        It has a maximum precision of roughly 1e-5, with a recommended precision bound of 5e-5.
     */
     class Head
     {
@@ -35,6 +86,15 @@ namespace ManSeg
             *head = *o.head;
         }
 
+        /* 
+            These equals operators must either be combined into a generic template function and
+            therefore could result in extra conversions when copying data.
+            If we want to keep the specialisation, then we need to either move the definition into
+            a separate .cpp file and compile a .o file for the library, or we can declare them
+            inline, as that allows multiple redefinitions.
+            Considering it is only for a few functions, (the TwoSegArray class specialisations must be
+            kept in this file) it seems like a reasonable compromise.
+        */
         template<typename T>
         inline Head& operator=(const T& rhs);
         template<typename T>
@@ -53,19 +113,23 @@ namespace ManSeg
         {
             __m128 head_v = _mm_set_ps(0.0f, 0.0f, *head, 0.0f);
             __m128d head_vd = _mm_castps_pd(head_v);
-            return head_vd[0];
+            double d;
+            _mm_store_sd(&d, head_vd);
+            return d;
         }
 
         float* head;
+        static constexpr int segmentBits = 32;
+        static constexpr __m128i head_mask = {(int_fast64_t)(0xFFFFFFFF00000000), (int_fast64_t)(0x0000000000000000)};
     };
 
     /*
         Class representing the "pair" of segments of a double.
         It is defined for ease of manipulating the values in an object of type TwoSegArray<true>.
         Each segment (which consists of a head and tail) is 32 bits.
-        The "head" contains the sign bit, full 11-bit exponent, and 20 bits of mantissa, 
+        The head contains the sign bit, full 11 bit exponent, and 20 bits of mantissa, 
         for a total of 32 bits.
-        The "tail" contains the remaining 32 bits of mantissa.
+        The tail segment contains the remaining 32 bits of mantissa.
     */
     class Pair
     {
@@ -98,11 +162,16 @@ namespace ManSeg
         {
             __m128 seg_v = _mm_set_ps(0.0f, 0.0f, *head, *tail);
             __m128d seg_vd = _mm_castps_pd(seg_v);
-            return seg_vd[0];
+            double d;
+            _mm_store_sd(&d, seg_vd);
+            return d;
         }
 
         float* head;
         float* tail;
+        static constexpr int segmentBits = 32;
+        static constexpr __m128i head_mask = {(int_fast64_t)(0xFFFFFFFF00000000), (int_fast64_t)(0x0000000000000000)};
+        // static constexpr __m128i lower_64_mask = {(int_fast64_t)(0xFFFFFFFFFFFFFFFF), (int_fast64_t)(0x0000000000000000)};
     };
 
     /*
@@ -121,30 +190,34 @@ namespace ManSeg
         User is required to manage de-allocation of memory manually, using the del()
         function, as the deconstructor does not free this space.
         Operations performed on values in the array are exactly the same as standard IEEE-754 doubles, but a bit slower due to combining of head and tail segments.
-
-		Note: the class deconstructor does not free space automatically, so use the delSegments and del functions to clean up.
     */
     template<>
     class TwoSegArray<true>
     {
     public:
-        TwoSegArray() 
-		{
-			heads = nullptr;
-			tails = nullptr;
-		}
+        TwoSegArray() {}
 
         TwoSegArray(const uint_fast64_t& length)
         {
-            heads = new float[length];
-            tails = new float[length] (); // initially zero tails array
+            // allocate one element extra
+            heads = new float[1 + length];
+            tails = new float[1 + length] (); // initially zero tails array
+            // following two lines put the extra element of the array at the front
+            // i.e. position 0
+            // this makes vector operations easier to deal with.
+            ++heads;
+            ++tails;
         }
 
         TwoSegArray(float* heads, float* tails)
             :heads(heads), tails(tails)
         {}
 
-        ~TwoSegArray() { }
+        ~TwoSegArray()
+        {
+            heads = nullptr;
+            tails = nullptr;
+        }
 
         Pair operator[](const uint_fast64_t& id)
         {
@@ -177,18 +250,20 @@ namespace ManSeg
         }
 
         /*
-            Returns object of the same type, with pointers to the same data values
-			as this object.
+            Returns *this (as we do not have any precision increase to do)
         */
         TwoSegArray<true> createFullPrecision()
         {
-            return TwoSegArray<true>(heads, tails);
+            return *this;
         }
 
         void alloc(const uint_fast64_t& length)
         {
-            heads = new float[length];
-            tails = new float[length] ();
+            heads = new float[1 + length];
+            tails = new float[1 + length] ();
+
+            ++heads;
+            ++tails;
         }
 
         /*
@@ -197,50 +272,60 @@ namespace ManSeg
             NOTE: this should only be called by one object with references to
             the same set of values (such as object created using createFullPrecision).
         */
+
         void del()
         {
-            if(heads != nullptr) delete[] heads;
-            if(tails != nullptr) delete[] tails;
-			heads = nullptr;
-			tails = nullptr;
+            if(heads != nullptr) delete[] (heads - 1);
+            if(tails != nullptr) delete[] (tails - 1);
         }
 
     private:
         float* heads;
         float* tails;
+
+        static constexpr int segmentBits = 32;
+        static constexpr uint32_t tailMask = ~0;
+        static constexpr doublerep headMask = static_cast<doublerep>(tailMask) << segmentBits;
+
     };
 
     /*
         Specialisation of TwoSegArray.
         Operations performed on values in the array only modify the "head" segment
         (i.e. the first 32 bits of a double value) unless specified otherwise.
-		Note: the class deconstructor does not free space automatically, so use the delSegments and del functions to clean up.
     */
     template<>
     class TwoSegArray<false>
     {
     public:
-        TwoSegArray()
-		{
-			heads = nullptr;
-			tails = nullptr;
-		}
+        TwoSegArray() {}
 
         TwoSegArray(const uint_fast64_t& length)
         {
-            heads = new float[length];
-            tails = new float[length] (); // initially zero tails array
+            heads = new float[1 + length];
+            tails = new float[1 + length] (); // initially zero tails array
+
+            ++heads;
+            ++tails;
         }
 
         TwoSegArray(float* heads, float* tails)
             :heads(heads), tails(tails)
         {}
 
-        ~TwoSegArray() { }
+        ~TwoSegArray()
+        {
+            heads = nullptr;
+            tails = nullptr;
+        }
 
         template<typename T>
         void set(const uint_fast64_t& id, const T& t)
         {
+            // double d = t;
+            // float *pd = (float*)&d;
+            // __m128 d_v = _mm_load_ss(pd + 1);
+            // _mm_store_ss(&heads[id], d_v);
             double d = t;
             __m128d d_v = _mm_set_pd(0.0, d);
             __m128 seg_v = _mm_castpd_ps(d_v);
@@ -253,7 +338,6 @@ namespace ManSeg
             double d = t;
             __m128d d_v = _mm_set_pd(0.0, d);
             __m128 seg_v = _mm_castpd_ps(d_v);
-			tails[id] = seg_v[0];
             heads[id] = seg_v[1];
         }
 
@@ -279,10 +363,13 @@ namespace ManSeg
 
         void alloc(const uint_fast64_t& length)
         {
-            heads = new float[length];
+            heads = new float[1 + length];
             // we should zero tails when allocating heads array for
             // to avoid unexpected behaviour
-            tails = new float[length] ();
+            tails = new float[1 + length] ();
+
+            ++heads;
+            ++tails;
         }
 
         /*
@@ -293,15 +380,17 @@ namespace ManSeg
         */
         void del()
         {
-            if(heads != nullptr) delete[] heads;
-            if(tails != nullptr) delete[] tails;   
-			heads = nullptr;
-			tails = nullptr;
+            if(heads != nullptr) delete[] (heads - 1);
+            if(tails != nullptr) delete[] (tails - 1);   
         }
 
     private:
         float* heads;
         float* tails;
+
+        static constexpr int segmentBits = 32;
+        static constexpr uint32_t tailMask = ~0;
+        static constexpr doublerep headMask = static_cast<doublerep>(tailMask) << segmentBits;
     };
 
 
@@ -344,16 +433,26 @@ namespace ManSeg
         __m128d d_v = _mm_set_pd(0.0, d);
         __m128 seg_v = _mm_castpd_ps(d_v);
         *head = seg_v[1];
+
+        // double d = other;
+        // __m128 f_v = _mm_loadu_ps(reinterpret_cast<float*>(&d) + 1);
+        // _mm_store_ss(&head, f_v);
+
         return *this;
     }
 
     template<typename T>
     inline Head& Head::operator=(const T&& other) noexcept
     {
+        // double d = other;
+        // float *pd = (float*)&d;
+        // __m128 d_v = _mm_load_ss(pd + 1);
+        // _mm_store_ss(head, d_v);
         double d = other;
         __m128d d_v = _mm_set_pd(0.0, d);
         __m128 seg_v = _mm_castpd_ps(d_v);
         *head = seg_v[1];
+
         return *this;
     }
 
@@ -466,6 +565,7 @@ namespace ManSeg
         __m128 seg_v = _mm_castpd_ps(d_v);
         *tail = seg_v[0];
         *head = seg_v[1];
+
         return *this;
     }
 
@@ -477,6 +577,7 @@ namespace ManSeg
         __m128 seg_v = _mm_castpd_ps(d_v);
         *tail = seg_v[0];
         *head = seg_v[1];
+
         return *this;
     }
 
@@ -556,89 +657,45 @@ namespace ManSeg
         return d;
     }
 
-	/* 
-		convenience typename for TwoSegArray that only accesses the "head" segment 
-		of a double precision number
-		i.e. reduced precision
-	*/
-    using HeadsArray = TwoSegArray<false>;
-
-	/* 
-		convenience typename for TwoSegArray that accesses the full 64 bits of
-		a double precision number
-		i.e. double precision
-	*/
-    using PairsArray = TwoSegArray<true>;
-
     /*
         Convenient type for use of TwoSegArray<false> and TwoSegArray<true> without having to manage two separate sets of arrays.
-		Note: the class deconstructor does not free space automatically, so use the delSegments and del functions to clean up.
         
         @heads - used to access only the first 32 bits of a double : [sign(1), exp(11), mantissa(20)]
-        @pairs - used to access all 64 bits of a double : [sign(1), exp(11), mantissa(52)] (slow, but does not require extra memory)
-        @full - used to access all 64 bits of double, in the standard IEEE method (fast, recommended, but requires extra space)
+        @pairs - used to access all 64 bits of a double : [sign(1), exp(11), mantissa(52)]
     */
     class ManSegArray
     {
     public:
-        HeadsArray heads;
-        PairsArray pairs;
-        double* full;
+        TwoSegArray<false> heads;
+        TwoSegArray<true> pairs;
 
-        ManSegArray() { full = nullptr; }
-
-        ~ManSegArray() { }
+        ManSegArray() {}
 
         ManSegArray(const uint_fast64_t& length)
         {
-            this->length = length;
             heads.alloc(length);
             pairs = heads.createFullPrecision();
-			full = nullptr;
         }
 
         /*
             Allocates length elements to the array dynamically.
             Note: this array space is used for both heads and pairs
         */
-        void alloc(const uint_fast64_t& length)
+        inline void alloc(const uint_fast64_t& length)
         {
-			this->length = length;
             heads.alloc(length);
             pairs = heads.createFullPrecision();
         }
 
-        /*
-            Implements precision switching by allocating length space for copying the full 64-bit values from
-			the pairs array to the full doubles array.
-
-            This is implemented using omp parallel, however it can also be accomplished by the user, as full is
-			publically available.
-        */
-        void copytoIEEEdouble()
-        {
-            full = new double[length];
-
-            #pragma omp parallel for
-			for(int i = 0; i < length; ++i)
-				full[i] = heads[i];
-        }
-
         /* 
-            Deletes space allocated to the segments arrays.
+            Deletes space allocated to the array.
             WARNING: should only be called once, as heads and pairs share the array space.
         */
-        void delSegments() { heads.del(); }
-
-		/*
-			Deletes space allocated to full IEEE double precision array.
-			Must be called in order to free space.
-		*/
-		void del() { if(full != nullptr) delete[] full; full = nullptr; }
-
-    private:
-        uint_fast64_t length;
+        inline void del() { heads.del(); }
     };
+
+    using HeadsArray = TwoSegArray<false>;
+    using PairsArray = TwoSegArray<true>;
 }
 
 #endif

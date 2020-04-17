@@ -8,7 +8,7 @@
 #include <omp.h>
 
 #include "util.h"
-#include "../mantissaSegmentation_dev.hpp"
+#include "../manseglib.hpp"
 
 using namespace ManSeg;
 using namespace std;

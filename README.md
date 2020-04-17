@@ -3,19 +3,14 @@
 Repository for the MEng project "A runtime library for mantissa segmentation".
 
 ## Notes about current implementation
-- can perform basic mantissa segmentation with expected outcomes
+- performs mantissa segmentation on a double precision number in two segments of 32 bits
+	- "Head" segment - upper 32 bits of a double precision number (1 sign, 11 exponent, 20 mantissa)
+	- "Tail" segment - lower 32 bits of a double precision number (32 mantissa)
 
-When compiled with -O4:
-- performance is less than desired:
-    - using heads only is slightly slower than double performance
-    - using heads+tails (pairs) is about twice as slow as double
+When compiled with -O3:
+	- using "heads" (single segment), performance is generally better than that of a double precision implementation
+	  (with some caveats)
+    - using pairs (both segments), performance is about 1.5 times as slow as double
 
-
-# ToDo List:
-* Investigate and fix performance issues
-    * too many conversions?
-    * inefficient arithmetic operations?
-    * ...
-
-* Find larger and more "real-world" test data for PageRank
-* Explore other algorithms
+Has applications in iterative algorithms that can make use of mixed precision and adaptive precision techniques,
+or applications where full double precision range of representation is required, but full 15~ decimal place precision is not.

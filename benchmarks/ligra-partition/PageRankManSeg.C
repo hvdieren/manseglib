@@ -23,7 +23,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ligra-numa.h"
 #include "math.h"
-#include "../../mantissaSegmentation_dev.hpp"
+#include "../../manseglib.hpp"
 using namespace ManSeg;
 int MaxIter=100;
 template<class vertex, class ArrayType>

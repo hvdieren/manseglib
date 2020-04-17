@@ -1,7 +1,7 @@
 #ifndef __VEC_H__
 #define __VEC_H__
 
-#include "mantissaSegmentation.hpp"
+#include "manseglib.hpp"
 #include "matrix.h"
 
 double prod(matr_* x, int n)

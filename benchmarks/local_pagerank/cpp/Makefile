@@ -22,7 +22,7 @@ pagerank_check.o: pagerank_check.cpp quicksort.h
 msa_pagerank: msa_pagerank.o
 	${CCX} -o msa_pagerank msa_pagerank.o
 
-msa_pagerank.o: msa_pagerank.cpp ../../../mantissaSegmentation_dev.hpp quicksort.h
+msa_pagerank.o: msa_pagerank.cpp ../../../manseglib.hpp quicksort.h
 	${CCX} ${CCXFLAGS} -c msa_pagerank.cpp
 
 omp_pagerank: omp_pagerank.o
@@ -36,7 +36,7 @@ omp_pagerank_manseg: omp_pagerank_manseg.o
 	${CCX} -fopenmp -o omp_pagerank_manseg omp_pagerank_manseg.o
 
 .PHONY: omp_pagerank_manseg.o 
-omp_pagerank_manseg.o: omp_pagerank_manseg.cpp quicksort.h ../../../mantissaSegmentation_dev.hpp
+omp_pagerank_manseg.o: omp_pagerank_manseg.cpp quicksort.h ../../../manseglib.hpp
 	${CCX} ${CCXFLAGS} -fopenmp -c omp_pagerank_manseg.cpp
 
 .PHONY: clean

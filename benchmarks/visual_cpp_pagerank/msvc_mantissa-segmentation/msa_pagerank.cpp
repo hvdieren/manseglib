@@ -9,7 +9,7 @@
 #include <iterator>
 #include <regex>
 
-#include "../../../mantissaSegmentation.hpp"
+#include "../../../manseglib.hpp"
 
 using namespace std;
 using namespace ManSeg;

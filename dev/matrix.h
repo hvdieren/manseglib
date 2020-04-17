@@ -1,7 +1,7 @@
 #ifndef __MATR_H__
 #define __MATR_H__
 
-#include "mantissaSegmentation.hpp"
+#include "manseglib.hpp"
 
 class matr_
 {

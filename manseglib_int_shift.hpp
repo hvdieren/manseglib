@@ -1,3 +1,15 @@
+/*
+	A header-based library for Mantissa (Significand) segmentation.
+	Author: Jordan Johnston (jjohnston499@qub.ac.uk)
+
+	Based on the basic idea of mantissa segmentation as detailed in "A Customized Precision format based on Mantissa Segmentation" (https://doi.org/10.1002/cpe.5418)
+	
+	This is the initial attempt at creating the library, utilising integers and shifting to accomplish data conversion from double precision to segments.
+	It was transformed into the vector code that was used in benchmarks, and is found in manseglib.hpp
+
+	It is not compatible with code that uses manseglib.hpp in it's current form.
+*/
+
 #ifndef __MANSEG_LIB_H__
 #define __MANSEG_LIB_H__
 

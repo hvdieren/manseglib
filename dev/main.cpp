@@ -6,7 +6,7 @@
 #include <chrono>
 #include <math.h>
 
-#include "mantissaSegmentation_dev.hpp"
+#include "../manseglib.hpp"
 // #include "matrix.h"
 // #include "vector.h"
 

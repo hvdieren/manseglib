@@ -1,5 +1,5 @@
 CC=gcc
-FLAGS= -O3 -mavx2
+FLAGS= -O3 -mavx2 -std=gnu99
 OMPFLAGS= -O3 -mavx2 -fopenmp
 
 CCX=g++
@@ -16,7 +16,7 @@ jacobi_omp: jacobi_omp.c
 
 ## jacobi using manseg library with omp
 .PHONY: jacobi_mod_omp.o
-jacobi_mod_omp.o: jacobi_mod_omp.cpp ../../../../mantissaSegmentation_dev.hpp
+jacobi_mod_omp.o: jacobi_mod_omp.cpp ../../../../manseglib.hpp
 	$(CCX) $(CCXOMPFLAGS) -c jacobi_mod_omp.cpp
 
 jacobi_mod_omp: jacobi_mod_omp.o

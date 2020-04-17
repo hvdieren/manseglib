@@ -32,7 +32,7 @@
 #include <time.h>
 #include <algorithm>
 #include <cmath>
-#include "../../mantissaSegmentation_f.hpp"
+#include "../../manseglib_vector_dev.hpp"
 
 using namespace ManSeg;
 

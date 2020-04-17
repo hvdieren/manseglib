@@ -32,7 +32,7 @@
 #include <time.h>
 #include <algorithm>
 #include <cmath>
-#include "../../mantissaSegmentation_dev.hpp"
+#include "../../manseglib.hpp"
 
 using namespace ManSeg;
 
@@ -336,32 +336,6 @@ void compute(int niters)
 
 		delta = maxdelta(iters);
 		printf("iteration %d: delta = %e\n", iters, delta);
-
-		// yes, this is an inefficient copy
-		// however, this is required to avoid segmentation fault
-		// because of some issue with constructor/deconstructor and
-		// memory allocation/deallocation i have not had time to
-		// diagnose.
-        // memcpy(A, A_new);
-		/* #pragma omp parallel for schedule(static) shared(A, A_new)
-		for(int i = 0; i < NB; ++i)
-		{
-			for(int j = 0; j < NB; ++j)
-			{
-				if(BlockPrecision[i][j] == Precision::HEADS)
-				{
-					for(int k = 0; k < B; ++k)
-						for(int l = 0; l < B; ++l)
-							A[i][j].heads[k * B + l] = A_new[i][j].heads[k * B + l];
-				}
-				else
-				{
-					for(int k = 0; k < B; ++k)
-						for(int l = 0; l < B; ++l)
-							A[i][j].full[k * B + l] = A_new[i][j].full[k * B + l];
-				}
-			}
-		} */
 		
 		if(MatrixPrecision == Precision::HEADS)
 		{
@@ -440,7 +414,7 @@ int main(int argc, char *argv[])
 
     printf("Running time  = %g %s\n", time_taken, "s");
 
-    FILE *outFile;
+    /* FILE *outFile;
     outFile = fopen("./jacobi_mod_omp_values.txt", "w");
     if (outFile == NULL)
     {
@@ -462,7 +436,7 @@ int main(int argc, char *argv[])
 							fprintf(outFile, "%.15f\n", (double)(A[ii][jj].heads[i * B + j]));
 
         fclose(outFile);
-    }
+    } */
 
     return 0;
 }
