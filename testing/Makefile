@@ -2,7 +2,7 @@
 CXX=g++
 CXXFLAGS=-O3 -std=c++17 -mavx2
 
-SEQ=head_pair_basic_sum basic_read_write array_op_overloads overload_function_equiv pico_pagerank pico_random_read pico_random_write
+SEQ=array_element_copy array_operator_functions basic_read_write head_pair_basic_sum precision_switch type_conversion pico_pagerank pico_random_read pico_random_write
 PARALLEL=pico_parallel_pagerank pico_parallel_random_read pico_parallel_random_write
 
 all:

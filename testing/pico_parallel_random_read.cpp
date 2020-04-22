@@ -91,8 +91,10 @@ int main()
     auto f_time = chrono::duration_cast<chrono::nanoseconds>(f_end - f_start).count()*1e-9;
     auto p_time = chrono::duration_cast<chrono::nanoseconds>(p_end - p_start).count()*1e-9;
 
-    cout << "std double: " << d_time << "s\nheads only: " << f_time << "s\npairs:      " << p_time << "s\ntotals" << endl;
-    cout << "std double: " << dtotal << "\nheads only: " << ftotal << "\npairs:      " << ptotal << endl;
+	cout << "times:" << endl;
+    cout << "std double: " << d_time << "s\npairs:      " << p_time << "s\nheads only: " << f_time << "s" << endl;
+	cout << "totals:" << endl;
+    cout << "std double: " << dtotal << "\npairs:      " << ptotal << "\nheads only: " << ftotal << endl;
 
     f->del(); t->del();
     delete[] d, f, t, loc;

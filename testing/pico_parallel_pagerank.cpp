@@ -72,7 +72,7 @@ double pr_with_acc(Arr& a, Arr& b, int* v, int* loc, const int& size)
 
 int main()
 {
-	const int size = 100000;
+	const int size = 200000;
 
 	int num_threads_avail;
 	num_threads_avail = omp_get_max_threads();
