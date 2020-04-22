@@ -50,8 +50,6 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
     int step = 0;
     FLOAT2 residual = tol;
 
-	FLOAT2 x_norm_prev, x_norm;
-	x_norm_prev = 0;
 	FLOAT *x_prev = CALLOC(FLOAT, n);
 	bool switching = false;
 
@@ -174,5 +172,5 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
     FREE(p);
     FREE(z);
     FREE(tr);
-	
+	FREE(x_prev);
 }

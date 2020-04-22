@@ -59,6 +59,20 @@ static inline void floatm_xpby(int n, FLOAT *x, FLOAT b, FLOAT *y) {
     for (int i = 0; i < n; i++) y[i] = x[i] + b * y[i];
 }
 
+static inline FLOAT floatm_max_diff_and_copy(int n, FLOAT *x, FLOAT *y) {
+	float maxv = -__FLT_MIN__;
+	#pragma omp parallel for reduction(max: maxv)
+	for(int i = 0; i < n; i++) {
+		float val = fabsf(x[i] - y[i]);
+		y[i] = x[i];
+		
+		if(val > maxv)
+			maxv = val;
+	}
+
+	return maxv;
+}
+
 // the dot product can be computed with more precision than FLOAT
 
 // inner product

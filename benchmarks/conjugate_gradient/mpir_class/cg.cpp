@@ -50,6 +50,8 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
     int step = 0;
     FLOAT2 residual = tol;
 
+	FLOAT *x_prev = CALLOC(FLOAT, n);
+
 	// tol = recurrence residual
 	// residual = true residual
 	// 10 = deviation (ie. over 10x) from the true residual
@@ -67,6 +69,9 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
 			printf("# rescheck: total_cg_iter=%d current_iter=%d tol=%e resid=%e\n", *in_iter, iter, (double)tol, (double)residual);
 
 			double explicit_residual_deviation = residual/tol;
+
+			float max_diff = floatm_max_diff_and_copy(n, x, x_prev);
+			printf("max diff = %e\n", max_diff);
 
 			if (explicit_residual_deviation > 10) {
 				printf("broke out : iter = %d\n", *in_iter);
@@ -126,5 +131,5 @@ void conjugate_gradient(int n, matrix *A, matrix *M, FLOAT *b, FLOAT *x, int max
     FREE(p);
     FREE(z);
     FREE(tr);
-	
+	FREE(x_prev);
 }
