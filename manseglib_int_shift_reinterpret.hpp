@@ -24,7 +24,7 @@ namespace ManSeg
     constexpr double MaxSingleSegmentPrecision = 1e-5;
     /* decimal precision: num_mantissa_bits*log10(2) = 6.02... */
     constexpr double AdaptivePrecisionBound = 5e-5;
-
+	
     /*
         Class representing the "head" segment of a double.
         It is defined for ease of manipulating the values in an object of type TwoSegArray<false>.
@@ -36,9 +36,14 @@ namespace ManSeg
     class Head
     {
     public:
-        Head(uint32_t& head)
+        Head(uint32_t* head)
             :head(head)
         {}
+
+		Head(const Head& o)
+		{
+			*head = *o.head;
+		}
 
         /* 
             These equals operators must either be combined into a generic template function and
@@ -65,12 +70,12 @@ namespace ManSeg
 
         operator double() const
         {
-            doublerep l = head;
-            l <<= segmentBits;
-            return *reinterpret_cast<double*>(&l);
+            doublerep l = *head;
+			l <<= segmentBits;
+			return *reinterpret_cast<double*>(&l);
         }
 
-        uint32_t& head;
+        uint32_t* head;
         static constexpr int segmentBits = 32;
     };
 
@@ -85,10 +90,21 @@ namespace ManSeg
     class Pair
     {
     public:
-        Pair(uint32_t& head, uint32_t& tail)
+        Pair(uint32_t* head, uint32_t* tail)
             :head(head), tail(tail)
         {}
 
+		Pair(const Pair& o)
+		{
+			*head = *o.head;
+			*tail = *o.tail;
+		}
+
+		Pair(const Head& o)
+		{
+			*head = *o.head;
+			*tail = 0;
+		}
 
         template<typename T>
         inline Pair& operator=(const T& rhs);
@@ -106,14 +122,14 @@ namespace ManSeg
 
         operator double() const
         {
-            doublerep l = head;
-            l <<= segmentBits;
-            l |= tail;
-            return *reinterpret_cast<double*>(&l);
+			doublerep l = *head;
+			l <<= segmentBits;
+			l |= *tail;
+			return *reinterpret_cast<double*>(&l);
         }
 
-        uint32_t& head;
-        uint32_t& tail;
+        uint32_t* head;
+        uint32_t* tail;
         static constexpr int segmentBits = 32;
         static constexpr uint32_t tailMask = ~0;
 
@@ -140,50 +156,50 @@ namespace ManSeg
     class TwoSegArray<true>
     {
     public:
-        TwoSegArray() {}
+        TwoSegArray() 
+		{
+			heads = nullptr;
+			tails = nullptr;
+		}
 
         TwoSegArray(const uint_fast64_t& length)
         {
             heads = new uint32_t[length];
-            tails = new uint32_t[length];
+            tails = new uint32_t[length] ();
         }
 
         TwoSegArray(uint32_t* heads, uint32_t* tails)
             :heads(heads), tails(tails)
         {}
 
-        ~TwoSegArray()
-        {
-            heads = nullptr;
-            tails = nullptr;
-        }
+        ~TwoSegArray() { }
 
         template<typename T>
         void set(const uint_fast64_t& id, const T& t)
         {
             double d = t;
-            const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-            heads[id] = l >> segmentBits;
+			doublerep l = *reinterpret_cast<doublerep*>(&d);
             tails[id] = (l & tailMask);
+            heads[id] = (l >> segmentBits);
         }
 
         template<typename T>
         void setPair(const uint_fast64_t& id, const T& t)
         {
             double d = t;
-            const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-            heads[id] = l >> segmentBits;
+			doublerep l = *reinterpret_cast<doublerep*>(&d);
             tails[id] = (l & tailMask);
+            heads[id] = (l >> segmentBits);
         }
 
         double read(const uint_fast64_t& id)
         {
-            return static_cast<double>(Pair(heads[id], tails[id]));
+            return static_cast<double>(Pair(&heads[id], &tails[id]));
         }
 
         Pair operator[](const uint_fast64_t& id)
         {
-            return Pair(heads[id], tails[id]);
+            return Pair(&heads[id], &tails[id]);
         }
 
         /*
@@ -191,7 +207,7 @@ namespace ManSeg
         */
         TwoSegArray<true> createFullPrecision()
         {
-            return *this;
+            return TwoSegArray<true>(heads, tails);
         }
 
         void alloc(const uint_fast64_t& length)
@@ -199,6 +215,8 @@ namespace ManSeg
             heads = new uint32_t[length];
             tails = new uint32_t[length] ();
         }
+
+		bool isAlloc() { return (heads != nullptr) && (tails != nullptr); }
 
         /*
             Deletes the values of the dynamic arrays used to store values in
@@ -210,6 +228,8 @@ namespace ManSeg
         {
             if(heads != nullptr) delete[] heads;
             if(tails != nullptr) delete[] tails;
+			heads = nullptr;
+			tails = nullptr;
         }
 
     private:
@@ -233,7 +253,11 @@ namespace ManSeg
     class TwoSegArray<false>
     {
     public:
-        TwoSegArray() {}
+        TwoSegArray()
+		{
+			heads = nullptr;
+			tails = nullptr;
+		}
 
         TwoSegArray(const uint_fast64_t& length)
         {
@@ -245,17 +269,13 @@ namespace ManSeg
             :heads(heads), tails(tails)
         {}
 
-        ~TwoSegArray()
-        {
-            heads = nullptr;
-            tails = nullptr;
-        }
+        ~TwoSegArray() { }
 
         template<typename T>
         void set(const uint_fast64_t& id, const T& t)
         {
             double d = t;
-            const doublerep l = *reinterpret_cast<const doublerep*>(&d);
+			doublerep l = *reinterpret_cast<doublerep*>(&d);
             heads[id] = (l >> segmentBits);
         }
 
@@ -263,19 +283,19 @@ namespace ManSeg
         void setPair(const uint_fast64_t& id, const T& t)
         {
             double d = t;
-            const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-            heads[id] = l >> segmentBits;
+			doublerep l = *reinterpret_cast<doublerep*>(&d);
             tails[id] = (l & tailMask);
+            heads[id] = (l >> segmentBits);
         }
 
         double read(const uint_fast64_t& id)
         {
-            return static_cast<double>(Head(heads[id]));
+            return static_cast<double>(Head(&heads[id]));
         }
 
         Head operator[](const uint_fast64_t& id)
         {
-            return Head(heads[id]);
+            return Head(&heads[id]);
         }
 
         /*
@@ -296,6 +316,8 @@ namespace ManSeg
             tails = new uint32_t[length] ();
         }
 
+		bool isAlloc() { return (heads != nullptr) && (tails != nullptr); }
+
         /*
             Deletes the values of the dynamic arrays used to store values in
             the array.
@@ -305,7 +327,9 @@ namespace ManSeg
         void del()
         {
             if(heads != nullptr) delete[] heads;
-            if(tails != nullptr) delete[] tails;
+            if(tails != nullptr) delete[] tails;   
+			heads = nullptr;
+			tails = nullptr;
         }
 
     private:
@@ -325,41 +349,37 @@ namespace ManSeg
     template<>
     inline Head& Head::operator=(const Head& other)
     {
-        uint32_t h = other.head;
-        head = h;
+        *head = *other.head;
         return *this;
     }
     
     template<>
     inline Head& Head::operator=(const Head&& other) noexcept
     {
-        uint32_t h = other.head;
-        head = h;
+        *head = *other.head;
         return *this;
     }
 
     template<>
     inline Head& Head::operator=(const Pair& other)
     {
-        uint32_t h = other.head;
-        head = h;
+        *head = *other.head;
         return *this;
     }
 
     template<>
     inline Head& Head::operator=(const Pair&& other) noexcept
     {
-        uint32_t h = other.head;
-        head = h;
+        *head = *other.head;
         return *this;
     }
 
     template<typename T>
-    inline Head& Head::operator=(const T& rhs)
+    inline Head& Head::operator=(const T& other)
     {
-        double d = rhs;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        head = (l >> segmentBits);
+        double d = other;
+		doublerep l = *reinterpret_cast<doublerep*>(&d);
+		*head = (l >> segmentBits);
         return *this;
     }
 
@@ -367,10 +387,8 @@ namespace ManSeg
     inline Head& Head::operator=(const T&& other) noexcept
     {
         double d = other;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        uint32_t h = (l >> segmentBits);
-
-        head = h;
+		doublerep l = *reinterpret_cast<doublerep*>(&d);
+		*head = (l >> segmentBits);
         return *this;
     }
 
@@ -378,10 +396,8 @@ namespace ManSeg
     double Head::operator+=(const T& rhs)
     {
         double t = *this;
-
         t += rhs;
         *this = t;
-
         return t;
     }
 
@@ -451,36 +467,32 @@ namespace ManSeg
     template<>
     inline Pair& Pair::operator=(const Head& other)
     {
-        uint32_t h = other.head;
-        head = h;
+       *head = *other.head;
+	   *tail = 0;
         return *this;
     }
     
     template<>
     inline Pair& Pair::operator=(const Head&& other) noexcept
     {
-        uint32_t h = other.head;
-        head = h;
+		*head = *other.head;
+		*tail = 0;
         return *this;
     }
 
     template<>
     inline Pair& Pair::operator=(const Pair& other)
     {
-        uint32_t h = other.head;
-        uint32_t t = other.tail;
-        head = h;
-        tail = t;
+        *head = *other.head;
+		*tail = *other.tail;
         return *this;
     }
     
     template<>
     inline Pair& Pair::operator=(const Pair&& other) noexcept
     {
-        uint32_t h = other.head;
-        uint32_t t = other.tail;
-        head = h;
-        tail = t;
+        *head = *other.head;
+		*tail = *other.tail;
         return *this;
     }
 
@@ -488,11 +500,9 @@ namespace ManSeg
     inline Pair& Pair::operator=(const T&& other) noexcept
     {
         double d = other;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        uint32_t h = (l >> segmentBits);
-        uint32_t t = (l & tailMask);
-        head = h;
-        tail = t;
+		doublerep l = *reinterpret_cast<doublerep*>(&d);
+		*tail = (l & tailMask);
+		*head = (l >> segmentBits);
         return *this;
     }
 
@@ -500,11 +510,9 @@ namespace ManSeg
     inline Pair& Pair::operator=(const T& other)
     {
         double d = other;
-        const doublerep l = *reinterpret_cast<const doublerep*>(&d);
-        uint32_t h = (l >> segmentBits);
-        uint32_t t = (l & tailMask);
-        head = h;
-        tail = t;
+		doublerep l = *reinterpret_cast<doublerep*>(&d);
+		*tail = (l & tailMask);
+		*head = (l >> segmentBits);
         return *this;
     }
 
@@ -576,24 +584,46 @@ namespace ManSeg
         return d;
     }
 
+    /* 
+		convenience typename for TwoSegArray that only accesses the "head" segment 
+		of a double precision number
+		i.e. reduced precision
+	*/
+    using HeadsArray = TwoSegArray<false>;
+
+	/* 
+		convenience typename for TwoSegArray that accesses the full 64 bits of
+		a double precision number
+		i.e. double precision
+	*/
+    using PairsArray = TwoSegArray<true>;
+
     /*
         Convenient type for use of TwoSegArray<false> and TwoSegArray<true> without having to manage two separate sets of arrays.
+		Note: the class deconstructor does not free space automatically, so use the delSegments and del functions to clean up.
         
-        @heads - used to access only the first 32 bits of a double : [sign(1), exp(11), mantissa(20)]
-        @pairs - used to access all 64 bits of a double : [sign(1), exp(11), mantissa(52)]
+        @heads - used to access only the upper 32 bits of a double : [sign(1), exp(11), mantissa(20)]
+        @pairs - used to access all 64 bits of a double : [sign(1), exp(11), mantissa(52)] (slow, but does not require extra memory)
+        @full - used to access all 64 bits of double, in the standard IEEE method (fast, recommended, but requires extra space)
     */
     class ManSegArray
     {
     public:
-        TwoSegArray<false> heads;
-        TwoSegArray<true> pairs;
+        HeadsArray heads; 		// provides access to values in reduced precision (i.e. the upper 32 bits of a double precision number)
+        PairsArray pairs; 		// provides access to values in full precision, by converting values from segments (i.e. all 64 bits of a double precision number)
+        double* full; 			// standard double precision access; requires use of copyToIEEEdouble, or manual population
+        uint_fast64_t length; 	// length of allocated array; should be manually set if parameterised constructor/alloc is not used.
 
-        ManSegArray() {}
+        ManSegArray() { full = nullptr; length = 0; }
+
+        ~ManSegArray() { }
 
         ManSegArray(const uint_fast64_t& length)
         {
+            this->length = length;
             heads.alloc(length);
             pairs = heads.createFullPrecision();
+			full = nullptr;
         }
 
         /*
@@ -602,19 +632,39 @@ namespace ManSeg
         */
         void alloc(const uint_fast64_t& length)
         {
+			this->length = length;
             heads.alloc(length);
             pairs = heads.createFullPrecision();
         }
 
+        /*
+            Implements precision switching by allocating length space for copying the full 64-bit values from
+			the pairs array to the full doubles array.
+
+            This is implemented using omp parallel, however it can also be accomplished by the user, as full is
+			publically available. Note: the length variable should be set if a user implemented copy is performed.
+        */
+        void copytoIEEEdouble()
+        {
+            full = new double[length];
+
+            #pragma omp parallel for
+			for(int i = 0; i < length; ++i)
+				full[i] = heads[i];
+        }
+
         /* 
-            Deletes space allocated to the array.
+            Deletes space allocated to the segments arrays.
             WARNING: should only be called once, as heads and pairs share the array space.
         */
-        void del() { heads.del(); }
-    };
+        void delSegments() { heads.del(); if(full == nullptr) length = 0; }
 
-    using HeadsArray = TwoSegArray<false>;
-    using PairsArray = TwoSegArray<true>;
+		/*
+			Deletes space allocated to full IEEE double precision array.
+			Must be called in order to free space.
+		*/
+		void del() { if(full != nullptr) delete[] full; full = nullptr; if(!heads.isAlloc()) length = 0; }
+    };
 }
 
 #endif
