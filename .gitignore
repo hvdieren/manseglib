@@ -1,24 +1,35 @@
 ##  dirs  ##
 .vscode/
-results/
 benchmarks/visual_cpp_pagerank/.vs/
 benchmarks/visual_cpp_pagerank/Debug/
 benchmarks/visual_cpp_pagerank/Release/
 benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Debug/
 benchmarks/visual_cpp_pagerank/msvc_mantissa-segmentation/Release/
+benchmarks/ligra-partition/*.txt
+benchmarks/ligra-partition/fromserver/pr_out/*.txt
+benchmarks/ligra-partition/fromserver/pr_out/real_bench/2020_03_03/
+benchmarks/ligra-partition/fromserver/pr_out/real_bench/2020_03_06/
+benchmarks/ligra-partition/fromserver/pr_out/real_bench/2020_03_17/
+benchmarks/ligra-partition/graphtools/cilkpub_v105/test/
+benchmarks/local_pagerank/cpp/*.txt
 cilk-swan/
 llvm-clang/
 graphs/
 benchmarks/ALT_ligra-master/
 snap_graphs/
 cilktools-linux-004501/
+results/conjugate_gradient/_old/
+results/jacobi_stencil/_old/
+results/pagerank/2020_03_08/
+results/pagerank/2020_03_30/
+results/pagerank/*.txt
+results/vm/ligra-partition/
 
 
 ##  files  ##
 *.o
 *.class
 *.mtx
-*.txt
 *.out
 *.pr_vals
 *.png
@@ -41,11 +52,11 @@ jacobi_mod_omp
 jacobi_omp
 
 # local_pagerank
-pagerank
-pagerank_check
-msa_pagerank
-pagerank_parallel
-msa_pagerank_parallel
+benchmarks/local_pagerank/pagerank
+benchmarks/local_pagerank/pagerank_check
+benchmarks/local_pagerank/msa_pagerank
+benchmarks/local_pagerank/pagerank_parallel
+benchmarks/local_pagerank/msa_pagerank_parallel
 
 # misc
 main
